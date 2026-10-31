@@ -18,8 +18,9 @@ ALL 70 RESEARCH FILES ARE BYTE-IDENTICAL TO ROOT ORIGINALS (SHA256 VERIFIED).
 ```
 - **Verdict**: PASS
 
-### 2. Configuration Leak Check
+### 2. Configuration Isolation Check
 - **Command**: `git ls-files sarconfig.json sarconfig.example.json`
+- **Date**: 2026-10-31 14:30:14
 - **Raw Output**:
 ```
 sarconfig.example.json
@@ -121,4 +122,38 @@ Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\home_tab.
 
 >>> GATE G0 RESULT: PASS <<<
 ==============================================================
+```
+
+---
+
+## Model Training: Final MSTAR ATR Classifier (`research_new/train_final_mstar.m`)
+
+- **Command**: `matlab -batch "startup; run('research_new/train_final_mstar.m');"`
+- **Date**: 2026-10-31 14:30:54
+- **Verdict**: PASS
+
+### Raw Command Output
+```
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==================== MSTAR FINAL ATR TRAINING ====================
+Date: 2026-10-31 14:30:54
+Preparing 15 deg test set (2425 chips)...
+Preparing 17 deg training set (2747 chips)...
+
+Beginning training across 5 seeds (30 epochs each)...
+Seed 1: Test Accuracy =  99.30 %  (Training time: 40.8 s)
+Seed 2: Test Accuracy =  99.05 %  (Training time: 31.5 s)
+Seed 3: Test Accuracy =  99.13 %  (Training time: 31.6 s)
+Seed 4: Test Accuracy =  98.93 %  (Training time: 30.9 s)
+Seed 5: Test Accuracy =  98.68 %  (Training time: 31.8 s)
+
+--- Summary across 5 seeds ---
+Mean Test Accuracy:  99.02 % +/-  0.23 %
+Target Gate Range : 98.82 % +/- 0.50 % (98.32 % - 99.32 %)
+
+[PASS] Seed 1 model saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+Seed 1 Test Accuracy:  99.30 %
+==================================================================
 ```
