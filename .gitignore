@@ -1,0 +1,25 @@
+# Git ignore for SAR Workbench
+# Data directories (do not commit datasets)
+/CCD-CP-CoPol/
+/Gotcha-CP-Disc2/
+/MSTAR-Public*
+/Sentinel1/
+/p4b_runs/
+/.venv/
+/figures/
+
+# MATLAB temp files & caches
+*.asv
+*.slxc
+*.autosave
+*.tmp
+_write_test.tmp
+
+# MATLAB data files (except models)
+*.mat
+!models/*.mat
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini

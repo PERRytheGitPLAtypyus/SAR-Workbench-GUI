@@ -1,0 +1,11 @@
+{
+  "dataPath": {
+    "mstar": "data/MSTAR",
+    "gotcha": "data/Gotcha-CP-Disc2",
+    "sentinel1": "data/Sentinel1",
+    "mstarSocMat": "data/mstar_soc.mat"
+  },
+  "modelsPath": "models",
+  "resultsPath": "p4b_stage2m.mat",
+  "runsPath": "p4b_runs"
+}
