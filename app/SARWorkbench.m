@@ -31,8 +31,10 @@ classdef SARWorkbench < handle
         LabelGotcha         matlab.ui.control.Label
         LampSentinel        matlab.ui.control.Lamp
         LabelSentinel       matlab.ui.control.Label
-        LampModels          matlab.ui.control.Lamp
-        LabelModels         matlab.ui.control.Label
+        LampMerlin          matlab.ui.control.Lamp
+        LabelMerlin         matlab.ui.control.Label
+        LampCnn             matlab.ui.control.Lamp
+        LabelCnn            matlab.ui.control.Label
         LabelOverall        matlab.ui.control.Label
     end
 
@@ -52,6 +54,16 @@ classdef SARWorkbench < handle
             updateHomeStatus(app);
         end
 
+        function saveScreenshot(app, outputPath)
+            % Export figure screenshot to disk
+            if nargin < 2 || isempty(outputPath)
+                outputPath = fullfile(fileparts(fileparts(mfilename('fullpath'))), 'docs', 'home_tab.png');
+            end
+            drawnow;
+            exportapp(app.UIFigure, outputPath);
+            fprintf('Screenshot saved to: %s\n', outputPath);
+        end
+
         function delete(app)
             % Destructor: close figure safely
             if ~isempty(app.UIFigure) && isvalid(app.UIFigure)
@@ -64,12 +76,12 @@ classdef SARWorkbench < handle
         function createComponents(app)
             % Main Figure Window
             app.UIFigure = uifigure('Name', 'SAR Workbench - Phase 5', ...
-                'Position', [100 100 1100 720], ...
+                'Position', [100 100 1100 750], ...
                 'Color', [0.95 0.95 0.96]);
 
             % Top tab group
             app.TabGroup = uitabgroup(app.UIFigure, ...
-                'Position', [10 10 1080 700]);
+                'Position', [10 10 1080 730]);
 
             % Create Tabs
             app.HomeTab      = uitab(app.TabGroup, 'Title', ' Home & Environment ');
@@ -94,19 +106,19 @@ classdef SARWorkbench < handle
             % Title header
             uilabel(parent, 'Text', 'SAR Workbench: System Status & Diagnostic Preflight', ...
                 'FontName', 'Segoe UI', 'FontSize', 18, 'FontWeight', 'bold', ...
-                'Position', [30 625 600 30]);
+                'Position', [30 655 600 30]);
 
             uilabel(parent, 'Text', 'Phase 5 release verification for synthetic simulation, Gotcha backprojection, classical/MERLIN filtering, and MSTAR ATR.', ...
                 'FontName', 'Segoe UI', 'FontSize', 12, 'FontColor', [0.3 0.3 0.3], ...
-                'Position', [30 600 800 22]);
+                'Position', [30 630 800 22]);
 
             % Left Panel: Environment Status Lights
             pnlStatus = uipanel(parent, 'Title', 'Hardware & Environment Status', ...
                 'FontName', 'Segoe UI', 'FontWeight', 'bold', 'FontSize', 13, ...
-                'Position', [30 180 500 400]);
+                'Position', [30 140 500 470]);
 
-            rowY = 320;
-            stepY = 44;
+            rowY = 405;
+            stepY = 42;
 
             % 1. MATLAB Version
             app.LampMatlab = uilamp(pnlStatus, 'Position', [25 rowY 20 20], 'Color', [0.7 0.7 0.7]);
@@ -144,10 +156,16 @@ classdef SARWorkbench < handle
             app.LabelSentinel = uilabel(pnlStatus, 'Text', 'Checking...', 'Position', [180 rowY 300 20]);
             rowY = rowY - stepY;
 
-            % 7. Trained Models
-            app.LampModels = uilamp(pnlStatus, 'Position', [25 rowY 20 20], 'Color', [0.7 0.7 0.7]);
-            uilabel(pnlStatus, 'Text', 'Trained Models:', 'FontWeight', 'bold', 'Position', [55 rowY 120 20]);
-            app.LabelModels = uilabel(pnlStatus, 'Text', 'Checking...', 'Position', [180 rowY 300 20]);
+            % 7. MERLIN Model (MSTAR)
+            app.LampMerlin = uilamp(pnlStatus, 'Position', [25 rowY 20 20], 'Color', [0.7 0.7 0.7]);
+            uilabel(pnlStatus, 'Text', 'MERLIN Net (MSTAR):', 'FontWeight', 'bold', 'Position', [55 rowY 125 20]);
+            app.LabelMerlin = uilabel(pnlStatus, 'Text', 'Checking...', 'Position', [180 rowY 300 20]);
+            rowY = rowY - stepY;
+
+            % 8. ATR CNN Model (MSTAR)
+            app.LampCnn = uilamp(pnlStatus, 'Position', [25 rowY 20 20], 'Color', [0.7 0.7 0.7]);
+            uilabel(pnlStatus, 'Text', 'ATR CNN Classifier:', 'FontWeight', 'bold', 'Position', [55 rowY 125 20]);
+            app.LabelCnn = uilabel(pnlStatus, 'Text', 'Checking...', 'Position', [180 rowY 300 20]);
             rowY = rowY - stepY;
 
             % Overall Status summary banner
@@ -155,24 +173,25 @@ classdef SARWorkbench < handle
                 'FontName', 'Segoe UI', 'FontSize', 13, 'FontWeight', 'bold', ...
                 'HorizontalAlignment', 'center', ...
                 'BackgroundColor', [0.9 0.9 0.9], ...
-                'Position', [25 15 450 30]);
+                'Position', [25 15 450 32]);
 
             % Refresh Button
             uibutton(parent, 'push', 'Text', 'Re-run Environment Check', ...
-                'FontWeight', 'bold', 'Position', [30 130 200 36], ...
+                'FontWeight', 'bold', 'Position', [30 90 200 36], ...
                 'ButtonPushedFcn', @(~,~) refreshEnvironment(app));
 
             % Right Panel: Mandatory Scientific Limits & Domain Advisory
             pnlLimits = uipanel(parent, 'Title', 'Scientific Limits & Physical Domain Boundaries', ...
                 'FontName', 'Segoe UI', 'FontWeight', 'bold', 'FontSize', 13, ...
-                'Position', [550 130 500 450]);
+                'Position', [550 90 500 520]);
 
             advisoryText = sprintf([ ...
                 '• MERLIN Deep Despeckling:\n' ...
                 '   - Requires COMPLEX single-look SAR imagery (H x W >= 128x128).\n' ...
                 '   - Disabled for amplitude-only data (e.g. Sentinel-1 GRD).\n' ...
                 '   - Validated on MSTAR chips: classification gain strictly at <= 10%% labels; no gain at >= 20%%.\n' ...
-                '   - Does NOT preserve point targets on Gotcha (peak ratio ~1.54 MSTAR net, ~0.39 Gotcha net).\n\n' ...
+                '   - distorts point targets (MSTAR net overshoots 1.54, Gotcha net undershoots 0.39).\n' ...
+                '   - MERLIN Gotcha-trained net FAILED VALIDATION (peak ratio 0.39, widths 1.39/1.45).\n\n' ...
                 '• Classical Filters (Lee, Frost, Boxcar, Gamma-MAP):\n' ...
                 '   - Provide no ATR accuracy gain beyond standard spatial augmentation.\n' ...
                 '   - Gamma-MAP exhibits an intrinsic -3.8%% negative intensity bias.\n\n' ...
@@ -186,16 +205,16 @@ classdef SARWorkbench < handle
 
             uitextarea(pnlLimits, 'Value', splitlines(advisoryText), ...
                 'Editable', 'off', 'FontName', 'Consolas', 'FontSize', 11, ...
-                'Position', [15 15 470 395]);
+                'Position', [15 15 470 465]);
         end
 
         function updateHomeStatus(app)
             st = app.EnvStatus;
             cPass = [0.15 0.75 0.25];   % Bright green
-            cWarn = [0.95 0.70 0.05];   % Yellow/amber
+            cWarn = [0.95 0.70 0.05];   % Amber / warning
             cFail = [0.85 0.20 0.15];   % Red
 
-            % MATLAB Version
+            % 1. MATLAB Version
             if isfield(st, 'matlab') && isfield(st.matlab, 'ok') && st.matlab.ok
                 app.LampMatlab.Color = cPass;
                 app.LabelMatlab.Text = sprintf('%s (%s)', st.matlab.release, st.matlab.version);
@@ -204,7 +223,7 @@ classdef SARWorkbench < handle
                 app.LabelMatlab.Text = 'Incompatible MATLAB version';
             end
 
-            % Toolboxes
+            % 2. Toolboxes
             if isfield(st, 'toolboxes') && isfield(st.toolboxes, 'allRequired') && st.toolboxes.allRequired
                 app.LampToolboxes.Color = cPass;
                 app.LabelToolboxes.Text = 'All required toolboxes installed';
@@ -213,7 +232,7 @@ classdef SARWorkbench < handle
                 app.LabelToolboxes.Text = 'Missing required toolboxes';
             end
 
-            % GPU
+            % 3. GPU
             if isfield(st, 'gpu') && isfield(st.gpu, 'available') && st.gpu.available
                 app.LampGPU.Color = cPass;
                 app.LabelGPU.Text = sprintf('%s (%.1f GB free)', st.gpu.name, st.gpu.availMemGB);
@@ -222,7 +241,7 @@ classdef SARWorkbench < handle
                 app.LabelGPU.Text = 'GPU unavailable (CPU mode only)';
             end
 
-            % MSTAR Data
+            % 4. MSTAR Data
             if isfield(st, 'data') && isfield(st.data, 'mstar') && strcmp(st.data.mstar.state, 'pass')
                 app.LampMstar.Color = cPass;
                 app.LabelMstar.Text = sprintf('Found (%d raw folders, soc mat=%d)', ...
@@ -232,7 +251,7 @@ classdef SARWorkbench < handle
                 app.LabelMstar.Text = 'Dataset not found';
             end
 
-            % Gotcha Data
+            % 5. Gotcha Data
             if isfield(st, 'data') && isfield(st.data, 'gotcha') && strcmp(st.data.gotcha.state, 'pass')
                 app.LampGotcha.Color = cPass;
                 app.LabelGotcha.Text = sprintf('Found (%d .mat files)', st.data.gotcha.numFiles);
@@ -241,7 +260,7 @@ classdef SARWorkbench < handle
                 app.LabelGotcha.Text = 'Dataset not found';
             end
 
-            % Sentinel-1
+            % 6. Sentinel-1
             if isfield(st, 'data') && isfield(st.data, 'sentinel1') && strcmp(st.data.sentinel1.state, 'pass')
                 app.LampSentinel.Color = cPass;
                 app.LabelSentinel.Text = sprintf('Found (%d SAFE folders)', st.data.sentinel1.numSafe);
@@ -250,18 +269,22 @@ classdef SARWorkbench < handle
                 app.LabelSentinel.Text = 'Optional dataset missing';
             end
 
-            % Models
+            % 7. MERLIN (MSTAR)
             if isfield(st, 'models') && isfield(st.models, 'merlinMstar') && st.models.merlinMstar.exists
-                if st.models.cnnMstar.exists
-                    app.LampModels.Color = cPass;
-                    app.LabelModels.Text = 'MERLIN & ATR CNN ready';
-                else
-                    app.LampModels.Color = cWarn;
-                    app.LabelModels.Text = 'MERLIN ready (ATR CNN pending G2b)';
-                end
+                app.LampMerlin.Color = cPass;
+                app.LabelMerlin.Text = 'Ready (models/p3b_merlin.mat)';
             else
-                app.LampModels.Color = cFail;
-                app.LabelModels.Text = 'Required models missing';
+                app.LampMerlin.Color = cFail;
+                app.LabelMerlin.Text = 'Missing (models/p3b_merlin.mat)';
+            end
+
+            % 8. ATR CNN (MSTAR)
+            if isfield(st, 'models') && isfield(st.models, 'cnnMstar') && st.models.cnnMstar.exists
+                app.LampCnn.Color = cPass;
+                app.LabelCnn.Text = 'Ready (models/cnn_mstar.mat)';
+            else
+                app.LampCnn.Color = cWarn;
+                app.LabelCnn.Text = 'Pending training (models/cnn_mstar.mat)';
             end
 
             % Overall status
@@ -280,50 +303,50 @@ classdef SARWorkbench < handle
             parent = app.DespeckleTab;
             uilabel(parent, 'Text', 'Despeckling Suite: Classical Filters & Self-Supervised MERLIN', ...
                 'FontName', 'Segoe UI', 'FontSize', 16, 'FontWeight', 'bold', ...
-                'Position', [30 630 650 30]);
+                'Position', [30 650 650 30]);
             uilabel(parent, 'Text', 'Feature implementation scheduled for Gate G2a verification.', ...
                 'FontName', 'Segoe UI', 'FontSize', 12, 'FontColor', [0.4 0.4 0.4], ...
-                'Position', [30 600 500 20]);
+                'Position', [30 620 500 20]);
         end
 
         function buildAtrTabPlaceholder(app)
             parent = app.AtrTab;
             uilabel(parent, 'Text', 'MSTAR Automatic Target Recognition (ATR)', ...
                 'FontName', 'Segoe UI', 'FontSize', 16, 'FontWeight', 'bold', ...
-                'Position', [30 630 650 30]);
+                'Position', [30 650 650 30]);
             uilabel(parent, 'Text', 'Feature implementation scheduled for Gate G2b verification.', ...
                 'FontName', 'Segoe UI', 'FontSize', 12, 'FontColor', [0.4 0.4 0.4], ...
-                'Position', [30 600 500 20]);
+                'Position', [30 620 500 20]);
         end
 
         function buildGotchaTabPlaceholder(app)
             parent = app.GotchaTab;
             uilabel(parent, 'Text', 'AFRL Gotcha Volumetric Backprojection Image Formation', ...
                 'FontName', 'Segoe UI', 'FontSize', 16, 'FontWeight', 'bold', ...
-                'Position', [30 630 650 30]);
+                'Position', [30 650 650 30]);
             uilabel(parent, 'Text', 'Feature implementation scheduled for Gate G2c verification.', ...
                 'FontName', 'Segoe UI', 'FontSize', 12, 'FontColor', [0.4 0.4 0.4], ...
-                'Position', [30 600 500 20]);
+                'Position', [30 620 500 20]);
         end
 
         function buildSimulateTabPlaceholder(app)
             parent = app.SimulateTab;
             uilabel(parent, 'Text', 'Synthetic Spotlight SAR Simulation & Backprojection', ...
                 'FontName', 'Segoe UI', 'FontSize', 16, 'FontWeight', 'bold', ...
-                'Position', [30 630 650 30]);
+                'Position', [30 650 650 30]);
             uilabel(parent, 'Text', 'Feature implementation scheduled for Gate G2d verification.', ...
                 'FontName', 'Segoe UI', 'FontSize', 12, 'FontColor', [0.4 0.4 0.4], ...
-                'Position', [30 600 500 20]);
+                'Position', [30 620 500 20]);
         end
 
         function buildResultsTabPlaceholder(app)
             parent = app.ResultsTab;
             uilabel(parent, 'Text', 'Experimental Results & Data Dose Learning Curves', ...
                 'FontName', 'Segoe UI', 'FontSize', 16, 'FontWeight', 'bold', ...
-                'Position', [30 630 650 30]);
+                'Position', [30 650 650 30]);
             uilabel(parent, 'Text', 'Feature implementation scheduled for Gate G2e verification.', ...
                 'FontName', 'Segoe UI', 'FontSize', 12, 'FontColor', [0.4 0.4 0.4], ...
-                'Position', [30 600 500 20]);
+                'Position', [30 620 500 20]);
         end
     end
 end

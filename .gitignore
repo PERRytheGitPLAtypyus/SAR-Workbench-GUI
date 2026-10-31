@@ -15,7 +15,8 @@
 *.tmp
 _write_test.tmp
 
-# MATLAB data files (except models)
+# Local user configuration (do not commit local machine paths)
+sarconfig.json
 *.mat
 !models/*.mat
 

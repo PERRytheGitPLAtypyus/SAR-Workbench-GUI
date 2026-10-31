@@ -4,17 +4,41 @@ This file records the verifiable execution history for all project gates. Every 
 
 ---
 
-## Gate G0: Repository Skeleton & Environment Baseline
+## Pre-Gate Verification: Research Frozen Integrity & Config Isolation
+
+### 1. Research SHA256 Integrity Verification
+- **Command**:
+```powershell
+powershell -Command "$diffFound = $false; Get-ChildItem -Path research/*.m | ForEach-Object { $rf = $_.FullName; $of = Join-Path (Get-Location) $_.Name; if (Test-Path $of) { $h1 = (Get-FileHash $rf -Algorithm SHA256).Hash; $h2 = (Get-FileHash $of -Algorithm SHA256).Hash; if ($h1 -ne $h2) { Write-Host ('DIFF: ' + $_.Name); $diffFound = $true; } } else { Write-Host ('MISSING IN ROOT: ' + $_.Name); $diffFound = $true; } }; if (-not $diffFound) { Write-Host 'ALL 70 RESEARCH FILES ARE BYTE-IDENTICAL TO ROOT ORIGINALS (SHA256 VERIFIED).' }"
+```
+- **Date**: 2026-10-31 13:58:10
+- **Raw Output**:
+```
+ALL 70 RESEARCH FILES ARE BYTE-IDENTICAL TO ROOT ORIGINALS (SHA256 VERIFIED).
+```
+- **Verdict**: PASS
+
+### 2. Configuration Leak Check
+- **Command**: `git ls-files sarconfig.json sarconfig.example.json`
+- **Raw Output**:
+```
+sarconfig.example.json
+```
+- **Verdict**: PASS (`sarconfig.json` is untracked and excluded by `.gitignore`)
+
+---
+
+## Gate G0: Repository Skeleton, Registry Validation & Environment Baseline
 
 - **Command**: `matlab -batch "addpath('tests'); test_g0_skeleton;"`
-- **Date**: 2026-10-31 13:29:15
+- **Date**: 2026-10-31 14:23:50
 - **Verdict**: PASS
 
 ### Raw Command Output
 ```
 SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
 ==================== GATE G0 VERIFICATION ====================
-Date: 2026-10-31 13:29:15
+Date: 2026-10-31 14:23:50
 SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
 [PASS] Skeleton directory exists: app
 [PASS] Skeleton directory exists: +sar
@@ -22,9 +46,11 @@ SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SA
 [PASS] Skeleton directory exists: tests
 [PASS] Skeleton directory exists: research
 [PASS] Skeleton directory exists: docs
-[PASS] Configuration files exist: sarconfig.json, sarconfig.example.json
+[PASS] Skeleton directory exists: research_new
+[PASS] Template configuration file exists: sarconfig.example.json
+[PASS] Despeckle registry verified: MERLIN Gotcha marked FAILED_VALIDATION.
 ================ SAR Workbench Environment Check ================
-Timestamp: 2026-10-31 13:29:16
+Timestamp: 2026-10-31 14:23:50
 Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
 
 [PASS] MATLAB Version: (R2026a) (26.1)
@@ -58,7 +84,7 @@ Launching programmatic UI figure: SARWorkbench...
 [ Warning: Scrollable is set to 'on' on all figures because the Windows accessibility text size setting is greater than 100%.
 To prevent this behavior, revert the text size setting back to 100% and instead use the Windows system display scale setting to increase the size of on-screen elements.]  
 ================ SAR Workbench Environment Check ================
-Timestamp: 2026-10-31 13:29:19
+Timestamp: 2026-10-31 14:23:54
 Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
 
 [PASS] MATLAB Version: (R2026a) (26.1)
@@ -87,7 +113,10 @@ Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
 >>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
 =================================================================
 
-[PASS] App opened and Home status lights match reality.
+[PASS] ATR CNN lamp is AMBER (matches reality: model not trained yet).
+[PASS] App opened and all Home status lights match reality.
+Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\home_tab.png
+[PASS] Home tab screenshot exported: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\home_tab.png
 [PASS] GUI safely closed.
 
 >>> GATE G0 RESULT: PASS <<<

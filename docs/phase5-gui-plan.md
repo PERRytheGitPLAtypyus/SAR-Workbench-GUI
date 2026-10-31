@@ -12,14 +12,22 @@ SAR Workbench is a comprehensive MATLAB application and adapter suite providing 
 1. **Separation of Concerns**: The GUI (`app/SARWorkbench.m`) is strictly a presentation layer. It contains no algorithms. All operations invoke `+sar` package functions.
 2. **Adapter Layer (`+sar`)**: Thin wrappers around validated frozen research functions (`bp_gotcha`, `despeckle_filters`, `p3b_denoise`, `mstar_read`, `p4b_predict`, etc.).
 3. **Registry Pattern**:
-   - `sar.registry.despeckle`: Declares despeckle algorithms, parameter metadata, input domain requirements (`complex` vs `amplitude`), and scientific constraints.
+   - `sar.registry.despeckle`: Declares despeckle algorithms, parameter metadata, input domain requirements (`complex` vs `amplitude`), and scientific constraints. Excludes failed methods (`status == 'FAILED_VALIDATION'`) from operational controls.
    - `sar.registry.classifiers`: Declares ATR model architectures, supported classes, normalization methods, and domain notes.
-4. **Configuration**: Configurable data and model paths managed via `sarconfig.json` (with `sarconfig.example.json` tracked in git).
+4. **Configuration**: Configurable data and model paths managed via `sarconfig.json` (untracked, local) and `sarconfig.example.json` (tracked in git).
 5. **Scientific Integrity**: Strict adherence to physical and empirical limits. Warnings are displayed when pre-conditions (e.g. complex single-look data for MERLIN, normalization consistency for CNNs) are violated.
 
 ---
 
-## 2. Directory Structure
+## 2. Deviations from the Brief
+1. **Model Filenames**: The brief references `models/merlin.mat`, whereas the frozen Phase 3b trained networks are named `models/p3b_merlin.mat` (MSTAR-trained) and `models/p3b_merlin_gotcha.mat` (Gotcha-trained).
+2. **Repository Location**: The brief mentions "Do not put the repo inside OneDrive", but the active workspace assigned by the environment was `C:\Users\sruja\OneDrive\Documents\SARorsmthn`. As confirmed by the user, the repository is maintained in this workspace with `.gitignore` strictly excluding datasets and `.mat` files, while `sarconfig.json` stores local paths and is not tracked in git (only `sarconfig.example.json` is committed).
+3. **Dedicated ATR CNN Status Lamp**: To ensure that the Home status lamps match reality 1-to-1 with the environment report, the model status is separated into two lamps: `LampMerlin` (Green) and `LampCnn` (Amber until `models/cnn_mstar.mat` is trained).
+4. **MERLIN Gotcha Validation Failure**: `models/p3b_merlin_gotcha.mat` failed the point-target preservation test (peak ratio 0.39, widths 1.39 and 1.45). It is explicitly registered with status `FAILED_VALIDATION` and excluded from normal operational despeckle options.
+
+---
+
+## 3. Directory Structure
 ```
 SARorsmthn/
 ├── app/
@@ -46,35 +54,37 @@ SARorsmthn/
 │       └── loadCurves.m
 ├── models/
 │   ├── p3b_merlin.mat          # Frozen MERLIN network (MSTAR-trained)
-│   ├── p3b_merlin_gotcha.mat   # Frozen MERLIN network (Gotcha-trained)
+│   ├── p3b_merlin_gotcha.mat   # Frozen MERLIN network (Gotcha-trained, failed validation)
 │   └── cnn_mstar.mat           # Final trained MSTAR 4-block CNN (trained in G2b)
 ├── tests/
+│   ├── test_g0_skeleton.m      # Automated verification test suite for Gate G0
 │   ├── TestG1Adapters.m        # MATLAB Unit Test suite for Gate G1 golden tests
 │   └── TestG3UI.m              # Scripted UI execution test suite for Gate G3
-├── research/                   # Frozen research scripts (strictly read-only)
+├── research/                   # Frozen research scripts (strictly read-only, byte-identical)
 ├── research_new/               # New utility/training scripts (e.g. train_final_mstar.m)
 ├── docs/
 │   ├── phase5-gui-plan.md      # This document
 │   ├── gate_log.md             # Execution log of all gates with raw command outputs
+│   ├── home_tab.png            # Screenshot of the Home tab matching environment reality
 │   ├── DATA.md                 # Data download and setup guide
 │   ├── CITATIONS.md            # Academic citations and data credits
 │   └── LIMITATIONS.md          # Known scientific and algorithmic boundaries
-├── sarconfig.json              # Local configuration file (data and model paths)
-├── sarconfig.example.json      # Template configuration file
+├── sarconfig.json              # Local configuration file (untracked in git)
+├── sarconfig.example.json      # Template configuration file (tracked in git)
 ├── startup.m                   # Project path setup script
 └── README.md                   # Project overview and quickstart guide
 ```
 
 ---
 
-## 3. Gates and Verification Milestones
+## 4. Gates and Verification Milestones
 
 ### Gate G0: Repository Skeleton & Environment Baseline
 - Create folder structure: `app/`, `+sar/`, `models/`, `tests/`, `research/`, `docs/`, `research_new/`.
-- Provide `sarconfig.json` and `sarconfig.example.json`.
+- Provide `sarconfig.json` (untracked) and `sarconfig.example.json` (tracked).
 - Implement `sar.env.check` verifying MATLAB version, required toolboxes, GPU availability, data directories, and model files.
 - Build initial tabbed `app/SARWorkbench.m` with Home tab showing real-time environment status.
-- **PASS Criteria**: App opens without error; Home status indicators accurately reflect environment and hardware.
+- **PASS Criteria**: App opens without error; Home status indicators accurately reflect environment and hardware (including Amber lamp for ATR CNN before training).
 
 ### Gate G1: `+sar` Adapters & Golden Unit Tests
 Golden verification tests running via `matlab.unittest`:
@@ -115,10 +125,10 @@ Golden verification tests running via `matlab.unittest`:
 
 ---
 
-## 4. Scientific Limits & Domain Constraints
+## 5. Scientific Limits & Domain Constraints
 The UI explicitly embeds and enforces the following physical and empirical truths:
 1. **MERLIN Single-Look Complex Requirement**: MERLIN was trained on complex single-look SAR data. It cannot operate on amplitude-only (detected) imagery such as Sentinel-1 GRD.
-2. **Point Target Degradation in MERLIN**: MERLIN does not preserve isolated point scattering on Gotcha data (peak ratio ~1.54 with MSTAR net, ~0.39 with Gotcha net). Gotcha imaging surfaces a prominent advisory banner when MERLIN is selected.
+2. **Point Target Distortion in MERLIN**: MERLIN distorts point targets (MSTAR net overshoots 1.54, Gotcha net undershoots 0.39). Gotcha net failed validation with peak ratio 0.39 and widths 1.39 and 1.45.
 3. **Classical Filter Characteristics**: Classical filters (Lee, Frost, Gamma-MAP) do not improve downstream classifier accuracy beyond standard data augmentation, and Gamma-MAP introduces an inherent -3.8% intensity bias.
 4. **Gotcha Autofocus Offsets**: AFRL Gotcha data exhibits 0.15-0.75 m look-dependent azimuth offsets. Phase Gradient Autofocus (PGA) is not implemented in this baseline.
 5. **Preprocessing Distribution Shift**: MSTAR classifiers trained under Normalisation N suffer catastrophic degradation (15-50% accuracy) if evaluated on mismatched preprocessing or raw unnormalized amplitudes.
