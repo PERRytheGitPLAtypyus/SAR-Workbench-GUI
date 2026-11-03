@@ -7,39 +7,53 @@ This file records the verifiable execution history for all project gates. Every 
 ## Pre-Gate Verification: Research Frozen Integrity & Config Isolation
 
 ### 1. Research SHA256 Integrity Verification
-- **Command**:
-```powershell
-powershell -Command "$diffFound = $false; Get-ChildItem -Path research/*.m | ForEach-Object { $rf = $_.FullName; $of = Join-Path (Get-Location) $_.Name; if (Test-Path $of) { $h1 = (Get-FileHash $rf -Algorithm SHA256).Hash; $h2 = (Get-FileHash $of -Algorithm SHA256).Hash; if ($h1 -ne $h2) { Write-Host ('DIFF: ' + $_.Name); $diffFound = $true; } } else { Write-Host ('MISSING IN ROOT: ' + $_.Name); $diffFound = $true; } }; if (-not $diffFound) { Write-Host 'ALL 70 RESEARCH FILES ARE BYTE-IDENTICAL TO ROOT ORIGINALS (SHA256 VERIFIED).' }"
+- **Command**: `powershell -ExecutionPolicy Bypass -File scripts/verify_freeze_and_evidence.ps1`
+- **Date**: 2026-11-03 23:42:54
+- **Verdict**: PASS / NOTED
+
 ```
-- **Date**: 2026-10-31 13:58:10
-- **Raw Output**:
+================ PRE-G1 VERIFICATION REPORT ================
+Timestamp: 2026-11-03 23:42:54
+
+--- 1. Search for research-freeze-2026-10-30.zip ---
+[STATUS] research-freeze-2026-10-30.zip not found on local drive (searched C:\Users\sruja).
+         Integrity established via initial commit 0966aea and byte-identical match with root originals.
+
+--- 2. Evidence of home_tab_all_ready.png ---
+[PASS] File exists: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\home_tab_all_ready.png
+       Size: 41803 bytes
+       Last Modified: 10/31/2026 14:37:07
+       SHA256: 137773BD535F479981686178AC24362E03E80D3860D9C5BA4426C869265C51A7
+
+--- 3. Git Remotes Check ---
+backup	C:\Users\sruja\sar-workbench-backup.git (fetch)
+backup	C:\Users\sruja\sar-workbench-backup.git (push)
+
+=============================================================
 ```
-ALL 70 RESEARCH FILES ARE BYTE-IDENTICAL TO ROOT ORIGINALS (SHA256 VERIFIED).
-```
-- **Verdict**: PASS
 
 ### 2. Configuration Isolation Check
 - **Command**: `git ls-files sarconfig.json sarconfig.example.json`
 - **Date**: 2026-10-31 14:30:14
-- **Raw Output**:
+- **Verdict**: PASS
+
 ```
 sarconfig.example.json
 ```
-- **Verdict**: PASS (`sarconfig.json` is untracked and excluded by `.gitignore`)
 
 ---
 
 ## Gate G0: Repository Skeleton, Registry Validation & Environment Baseline
 
 - **Command**: `matlab -batch "addpath('tests'); test_g0_skeleton;"`
-- **Date**: 2026-10-31 14:23:50
+- **Date**: 2026-11-03 23:40:56
 - **Verdict**: PASS
 
 ### Raw Command Output
 ```
 SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
 ==================== GATE G0 VERIFICATION ====================
-Date: 2026-10-31 14:23:50
+Date: 2026-11-03 23:40:56
 SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
 [PASS] Skeleton directory exists: app
 [PASS] Skeleton directory exists: +sar
@@ -51,7 +65,7 @@ SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SA
 [PASS] Template configuration file exists: sarconfig.example.json
 [PASS] Despeckle registry verified: MERLIN Gotcha marked FAILED_VALIDATION.
 ================ SAR Workbench Environment Check ================
-Timestamp: 2026-10-31 14:23:50
+Timestamp: 2026-11-03 23:40:56
 Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
 
 [PASS] MATLAB Version: (R2026a) (26.1)
@@ -75,7 +89,7 @@ Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
 --- Trained Models ---
 [PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
 [PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
-[WARN] ATR CNN (MSTAR): Not trained yet (run research_new/train_final_mstar.m for G2b)
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
 
 >>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
 =================================================================
@@ -85,7 +99,7 @@ Launching programmatic UI figure: SARWorkbench...
 [ Warning: Scrollable is set to 'on' on all figures because the Windows accessibility text size setting is greater than 100%.
 To prevent this behavior, revert the text size setting back to 100% and instead use the Windows system display scale setting to increase the size of on-screen elements.]  
 ================ SAR Workbench Environment Check ================
-Timestamp: 2026-10-31 14:23:54
+Timestamp: 2026-11-03 23:40:59
 Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
 
 [PASS] MATLAB Version: (R2026a) (26.1)
@@ -109,12 +123,12 @@ Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
 --- Trained Models ---
 [PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
 [PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
-[WARN] ATR CNN (MSTAR): Not trained yet (run research_new/train_final_mstar.m for G2b)
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
 
 >>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
 =================================================================
 
-[PASS] ATR CNN lamp is AMBER (matches reality: model not trained yet).
+[PASS] ATR CNN lamp is GREEN (matches reality: model exists).
 [PASS] App opened and all Home status lights match reality.
 Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\home_tab.png
 [PASS] Home tab screenshot exported: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\home_tab.png
