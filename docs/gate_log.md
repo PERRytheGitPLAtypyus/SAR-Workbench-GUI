@@ -171,3 +171,59 @@ Target Gate Range : 98.82 % +/- 0.50 % (98.32 % - 99.32 %)
 Seed 1 Test Accuracy:  99.30 %
 ==================================================================
 ```
+
+---
+
+## Gate G1: Adapters and Golden Tests (`tests/run_g1_tests.m`)
+
+- **Command**: `matlab -batch "addpath('tests'); run_g1_tests;"`
+- **Date**: 2026-11-03 23:50:19
+- **Verdict**: PASS
+
+### Raw Command Output
+```
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==================== GATE G1 ADAPTERS & GOLDEN TESTS ====================
+Date: 2026-11-03 23:50:19
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+Running TestG1Adapters
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+[PASS] testMstarDatasetCounts: train 2747, test 2425, 10 classes verified.
+.gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+[PASS] testGotchaPass8ApertureAndResolution: 358 pulses x 432 freqs, -3 dB width X = 0.302 m (0.30 m +/- 10%).
+.[PASS] testClassifierAccuracy: 5-seed mean 99.02 %, seed 1 99.30 % (within 98.82 +/- 0.50 %).
+.[PASS] testSyntheticSpeckleBiases: Lee bias = +0.01 %, Gamma-MAP bias = -3.89 % (diffs: 0.000000e+00, 0.000000e+00).
+.[PASS] testMerlinSyntheticSelfTest: median |log(Rhat/R)| = 0.0817 (gate: 0.081 +/- 0.02).
+.[PASS] testMerlinEvaluationMetrics: ENL gain = 21.39, bias = +1.96 %, numerical diff = 0.000000e+00.
+.[PASS] testScientificDomainBoundaries: MERLIN correctly rejects real amplitude input.
+.
+Done TestG1Adapters
+__________
+
+
+----------------- Test Results Summary -----------------
+
+ans =
+
+  7 6 table
+
+                                    Name                                    Passed    Failed    Incomplete    Duration      Details   
+    ____________________________________________________________________    ______    ______    __________    ________    ____________
+
+    {'TestG1Adapters/testMstarDatasetCounts'                           }    true      false       false        1.8387     {1 1 struct}
+    {'TestG1Adapters/testGotchaPass8ApertureAndResolution'             }    true      false       false       0.59946     {1 1 struct}
+    {'TestG1Adapters/testClassifierAccuracy'                           }    true      false       false        7.9469     {1 1 struct}
+    {'TestG1Adapters/testSyntheticSpeckleBiasesAndNumericalEquivalence'}    true      false       false       0.13996     {1 1 struct}
+    {'TestG1Adapters/testMerlinSyntheticSelfTest'                      }    true      false       false        3.2154     {1 1 struct}
+    {'TestG1Adapters/testMerlinEvaluationMetrics'                      }    true      false       false        1.2799     {1 1 struct}
+    {'TestG1Adapters/testScientificDomainBoundaries'                   }    true      false       false       0.13671     {1 1 struct}
+
+
+>>> GATE G1 RESULT: PASS (All 7 golden tests passed) <<<
+=========================================================================
+```
+
