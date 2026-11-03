@@ -54,9 +54,15 @@ assert(isequal(gui.LampGotcha.Color, green), 'Gotcha data lamp must be green');
 assert(isequal(gui.LampSentinel.Color, green), 'Sentinel-1 lamp must be green');
 assert(isequal(gui.LampMerlin.Color, green), 'MERLIN MSTAR lamp must be green');
 
-% ATR CNN is not trained yet -> MUST BE AMBER!
-assert(isequal(gui.LampCnn.Color, amber), 'ATR CNN lamp must be AMBER when cnn_mstar.mat is missing');
-fprintf('[PASS] ATR CNN lamp is AMBER (matches reality: model not trained yet).\n');
+% ATR CNN lamp matches sar.env.check state:
+cnnExists = exist(fullfile(root, 'models', 'cnn_mstar.mat'), 'file') ~= 0;
+if cnnExists
+    assert(isequal(gui.LampCnn.Color, green), 'ATR CNN lamp must be GREEN when cnn_mstar.mat exists');
+    fprintf('[PASS] ATR CNN lamp is GREEN (matches reality: model exists).\n');
+else
+    assert(isequal(gui.LampCnn.Color, amber), 'ATR CNN lamp must be AMBER when cnn_mstar.mat is missing');
+    fprintf('[PASS] ATR CNN lamp is AMBER (matches reality: model not trained yet).\n');
+end
 fprintf('[PASS] App opened and all Home status lights match reality.\n');
 
 % Save screenshot of the Home tab
