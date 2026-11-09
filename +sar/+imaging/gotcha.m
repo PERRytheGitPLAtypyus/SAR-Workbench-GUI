@@ -28,53 +28,53 @@ classdef gotcha
         end
 
         function stats = pointTargetResolution(img, xv, yv, targetPos)
-            % Compute peak height and -3 dB width using interpolation
-            % Matches the validated reference implementation from run_phase1c / p3b_gotcha_test.
+            % Compute peak height and -3 dB width using exact halfwidth logic of p3b_gotcha_test
             if nargin < 4 || isempty(targetPos)
                 % Default to 15TR03C at az 1-3
                 targetPos = [-28.09, 38.67];
             end
             
-            A = abs(img);
+            Q = abs(img).^2; % Intensity
             [~, ix] = min(abs(xv - targetPos(1)));
             [~, iy] = min(abs(yv - targetPos(2)));
             
-            % Local sub-window around target
             dx = mean(diff(xv));
-            winR = round(2.0 / dx);
-            ry = max(1, iy-winR):min(size(A,1), iy+winR);
-            rx = max(1, ix-winR):min(size(A,2), ix+winR);
+            h = 40;
+            cx = max(1, ix-h):min(size(Q,2), ix+h);
+            cy = max(1, iy-h):min(size(Q,1), iy+h);
             
-            subA = A(ry, rx);
-            [pkVal, maxIdx] = max(subA(:));
-            [subY, subX] = ind2sub(size(subA), maxIdx);
-            peakY = ry(subY);
-            peakX = rx(subX);
+            subQ = Q(cy, cx);
+            [pkVal, maxIdx] = max(subQ(:));
+            [subY, subX] = ind2sub(size(subQ), maxIdx);
+            py = cy(subY);
+            px = cx(subX);
             
-            % Interpolate profiles for sub-pixel -3 dB width
-            h = min(40, min(peakX-1, size(A,2)-peakX));
-            cx = peakX-h : peakX+h;
-            cy = peakY-h : peakY+h;
-            
-            xi = linspace(xv(cx(1)), xv(cx(end)), 2001);
-            yi = linspace(yv(cy(1)), yv(cy(end)), 2001);
-            
-            ax = interp1(xv(cx), A(peakY, cx), xi, 'spline');
-            ay = interp1(yv(cy), A(cy, peakX).', yi, 'spline');
-            
-            halfMaxX = pkVal / sqrt(2);
-            halfMaxY = pkVal / sqrt(2);
-            
-            wxIdx = xi(ax >= halfMaxX);
-            wyIdx = yi(ay >= halfMaxY);
+            % Exact halfwidth from research/p3b_gotcha_test.m
+            wx = sar.imaging.gotcha.halfwidth(Q(py, cx), px - cx(1) + 1, dx);
+            wy = sar.imaging.gotcha.halfwidth(Q(cy, px).', py - cy(1) + 1, dx);
             
             stats = struct();
-            stats.peakValue = pkVal;
-            stats.peakPos = [xv(peakX), yv(peakY)];
-            stats.offsetMeters = hypot(xv(peakX) - targetPos(1), yv(peakY) - targetPos(2));
-            stats.widthX = max(wxIdx) - min(wxIdx);
-            stats.widthY = max(wyIdx) - min(wyIdx);
-            stats.meanWidth = 0.5 * (stats.widthX + stats.widthY);
+            stats.peakValue = sqrt(pkVal);
+            stats.peakIntensity = pkVal;
+            stats.peakPos = [xv(px), yv(py)];
+            stats.offsetMeters = hypot(xv(px) - targetPos(1), yv(py) - targetPos(2));
+            stats.widthX = wx;
+            stats.widthY = wy;
+            stats.meanWidth = 0.5 * (wx + wy);
+        end
+
+        function w = halfwidth(p, i0, dx)
+            % Linear interpolation -3 dB width from research/p3b_gotcha_test.m
+            pk = p(i0);
+            hlf = pk / 2;
+            l = i0;
+            r = i0;
+            while l > 1 && p(l) > hlf, l = l - 1; end
+            while r < numel(p) && p(r) > hlf, r = r + 1; end
+            if p(l) > hlf || p(r) > hlf, w = NaN; return; end
+            xl = l + (hlf - p(l)) / (p(l+1) - p(l));
+            xr = (r - 1) + (p(r-1) - hlf) / (p(r-1) - p(r));
+            w = (xr - xl) * dx;
         end
     end
 end

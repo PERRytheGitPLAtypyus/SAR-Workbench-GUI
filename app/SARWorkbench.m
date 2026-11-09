@@ -36,11 +36,32 @@ classdef SARWorkbench < handle
         LampCnn             matlab.ui.control.Lamp
         LabelCnn            matlab.ui.control.Label
         LabelOverall        matlab.ui.control.Label
+        ButtonRefresh       matlab.ui.control.Button
+    end
+
+    methods (Static)
+        function repoRoot = ensurePaths()
+            % Ensure repository root and package subdirectories are on MATLAB path
+            appDir = fileparts(mfilename('fullpath'));
+            if isempty(appDir)
+                appDir = fileparts(which('SARWorkbench'));
+            end
+            repoRoot = fileparts(appDir);
+            reqPaths = {repoRoot, appDir, fullfile(repoRoot, 'research'), fullfile(repoRoot, 'models')};
+            pList = split(path, pathsep);
+            for k = 1:numel(reqPaths)
+                p = reqPaths{k};
+                if exist(p, 'dir') && ~any(strcmpi(pList, p))
+                    addpath(p);
+                end
+            end
+        end
     end
 
     methods
         function app = SARWorkbench()
-            % Constructor: Build UI and refresh environment status
+            % Constructor: Self-initialize paths, build UI and refresh environment
+            SARWorkbench.ensurePaths();
             createComponents(app);
             refreshEnvironment(app);
             if nargout == 0
@@ -49,9 +70,30 @@ classdef SARWorkbench < handle
         end
 
         function refreshEnvironment(app)
-            % Query system environment via adapter
-            app.EnvStatus = sar.env.check();
-            updateHomeStatus(app);
+            % Query system environment via adapter with robust error boundary
+            try
+                SARWorkbench.ensurePaths();
+                app.EnvStatus = sar.env.check();
+                updateHomeStatus(app);
+            catch ME
+                if ~isempty(app.UIFigure) && isvalid(app.UIFigure)
+                    uialert(app.UIFigure, ME.message, 'Environment Check Error', 'Icon', 'error');
+                end
+                warning('SARWorkbench:refreshEnvironment', 'Environment check failed: %s', ME.message);
+            end
+        end
+
+        function handleCallback(app, callbackFn)
+            % Generic callback wrapper with exception trapping and user alert
+            try
+                SARWorkbench.ensurePaths();
+                callbackFn();
+            catch ME
+                if ~isempty(app.UIFigure) && isvalid(app.UIFigure)
+                    uialert(app.UIFigure, ME.message, 'Operation Error', 'Icon', 'error');
+                end
+                warning('SARWorkbench:CallbackError', 'Callback execution failed: %s', ME.message);
+            end
         end
 
         function saveScreenshot(app, outputPath)
@@ -176,9 +218,9 @@ classdef SARWorkbench < handle
                 'Position', [25 15 450 32]);
 
             % Refresh Button
-            uibutton(parent, 'push', 'Text', 'Re-run Environment Check', ...
+            app.ButtonRefresh = uibutton(parent, 'push', 'Text', 'Re-run Environment Check', ...
                 'FontWeight', 'bold', 'Position', [30 90 200 36], ...
-                'ButtonPushedFcn', @(~,~) refreshEnvironment(app));
+                'ButtonPushedFcn', @(~,~) handleCallback(app, @() refreshEnvironment(app)));
 
             % Right Panel: Mandatory Scientific Limits & Domain Advisory
             pnlLimits = uipanel(parent, 'Title', 'Scientific Limits & Physical Domain Boundaries', ...

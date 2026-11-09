@@ -227,3 +227,397 @@ ans =
 =========================================================================
 ```
 
+---
+
+## Gate G0 (Reopened): Interactive Session Path Bug & Callback Failure
+
+- **Status**: REOPENED
+- **Verdict**: FAIL (Reproduced)
+- **Date**: 2026-11-10 00:17:32
+- **Command**: `powershell -File "scripts/reproduce_path_bug.ps1"`
+- **Test Context**: Executed from outside repository root (`$env:TEMP`) with only `app/` on MATLAB path.
+
+### Raw Error Reproduction Output
+```
+[ Warning: Scrollable is set to 'on' on all figures because the Windows accessibility text size setting is greater than 100%.
+To prevent this behavior, revert the text size setting back to 100% and instead use the Windows system display scale setting to increase the size of on-screen elements.]  
+{ Unable to resolve the name 'sar.env.check'.
+
+Error in SARWorkbench/refreshEnvironment (line 53)
+            app.EnvStatus = sar.env.check();
+                            ^^^^^^^^^^^^^^^
+Error in SARWorkbench (line 45)
+            refreshEnvironment(app);
+            ^^^^^^^^^^^^^^^^^^^^^^^
+}  
+ERROR: MATLAB error Exit Status: 0x00000001
+```
+
+### Root Cause Analysis & Fix
+1. **Path Independence Failure**:
+   - `+sar` is a top-level package directory at the repository root. When MATLAB starts from an external folder with only `app/` added to the search path, `sar.env.check` cannot resolve.
+   - In `ensurePaths()`, checking `contains(path, repoRoot)` returned `true` erroneously because `repoRoot\app` was already in `path` (substring match). Thus `addpath(repoRoot)` was skipped.
+   - Fix: Changed path membership check to exact token comparison (`pList = split(path, pathsep); if ~any(strcmpi(pList, reqPath))`).
+   - `SARWorkbench.ensurePaths()` now unconditionally ensures `repoRoot`, `app`, `research`, and `models` are on the MATLAB path before any component creation or method invocation.
+2. **Missing UI Error Boundaries**:
+   - Button callbacks previously invoked `refreshEnvironment` directly without error isolation, dumping stack traces into the MATLAB command window upon failure.
+   - Fix: Introduced `handleCallback(app, callbackFn)` method which catches exceptions, issues a user-visible `uialert(app.UIFigure, ME.message, ...)`, and logs a structured warning.
+3. **Permanent Regression Test**:
+   - Implemented `tests/test_path_independence.m` to verify launch and programmatic button interactions from external directories with only `app/` on path.
+
+---
+
+## Gate G0 (Re-Verification): Three Starting Conditions & Regression Test
+
+- **Date**: 2026-11-10 01:48:35
+- **Command**: `powershell -File "scripts/test_three_conditions.ps1"`
+- **Verdict**: PASS
+
+### Raw Three-Condition Launch Output
+```
+=================== CONDITION (A): REPO ROOT ===================
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+================ TESTING LAUNCH: CONDITION A_RepoRoot ================
+Current Directory: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+Launching SARWorkbench...
+[ Warning: Scrollable is set to 'on' on all figures because the Windows accessibility text size setting is greater than 100%.
+To prevent this behavior, revert the text size setting back to 100% and instead use the Windows system display scale setting to increase the size of on-screen elements.]  
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-10 01:48:35
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] App launched. Overall status: PASS
+Programmatically triggering Refresh button...
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-10 01:48:37
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] Refresh button executed successfully. Status: PASS
+[PASS] App closed cleanly.
+>>> CONDITION A_RepoRoot RESULT: PASS <<<
+
+
+============== CONDITION (B): EXTERNAL DIR (TEMP) ==============
+================ TESTING LAUNCH: CONDITION B_ExternalFolderOnlyApp ================
+Current Directory: C:\Users\sruja\AppData\Local\Temp
+Launching SARWorkbench...
+[ Warning: Scrollable is set to 'on' on all figures because the Windows accessibility text size setting is greater than 100%.
+To prevent this behavior, revert the text size setting back to 100% and instead use the Windows system display scale setting to increase the size of on-screen elements.]  
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-10 01:48:54
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] App launched. Overall status: PASS
+Programmatically triggering Refresh button...
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-10 01:48:57
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] Refresh button executed successfully. Status: PASS
+[PASS] App closed cleanly.
+>>> CONDITION B_ExternalFolderOnlyApp RESULT: PASS <<<
+
+
+============== CONDITION (C): USERPATH (DEFAULT) ===============
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+================ TESTING LAUNCH: CONDITION C_UserPathDefault ================
+Current Directory: C:\Users\sruja\OneDrive\Documents\MATLAB
+Launching SARWorkbench...
+[ Warning: Scrollable is set to 'on' on all figures because the Windows accessibility text size setting is greater than 100%.
+To prevent this behavior, revert the text size setting back to 100% and instead use the Windows system display scale setting to increase the size of on-screen elements.]  
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-10 01:49:15
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] App launched. Overall status: PASS
+Programmatically triggering Refresh button...
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-10 01:49:17
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] Refresh button executed successfully. Status: PASS
+[PASS] App closed cleanly.
+>>> CONDITION C_UserPathDefault RESULT: PASS <<<
+
+
+================ ALL THREE CONDITIONS COMPLETE ================
+```
+
+### Permanent Path Independence Test (`tests/test_path_independence.m`)
+- **Command**: `matlab -batch "res = runtests('tests/test_path_independence.m'); disp(table(res))"`
+- **Date**: 2026-11-10 01:51:42
+- **Verdict**: PASS
+```
+                                      Name                                      Passed    Failed    Incomplete    Duration      Details   
+    ________________________________________________________________________    ______    ______    __________    ________    ____________
+
+    {'test_path_independence/testLaunchFromExternalFolderWithOnlyAppOnPath'}    true      false       false        6.8378     {1 1 struct}
+```
+
+---
+
+## Gate G1 Negative Controls (`tests/run_g1_negative_controls.m`)
+
+- **Command**: `matlab -batch "addpath('tests'); run_g1_negative_controls;"`
+- **Date**: 2026-11-10 02:03:03
+- **Verdict**: PASS (All 7 Negative Controls actively caught and failed)
+
+### Raw Negative Controls Output
+```
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==================== GATE G1 NEGATIVE CONTROLS ====================
+Date: 2026-11-10 02:03:03
+
+--- 1. Negative Control: MSTAR Dataset Counts ---
+[EXPECTED FAIL] Caught assertion: "Deliberate mismatch: expected 2000 train chips"
+
+--- 2. Negative Control: Gotcha Resolution Width ---
+gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+[EXPECTED FAIL] Caught assertion: "Resolution width 0.523 m outside [0.27, 0.33] m"
+
+--- 3. Negative Control: ATR Classifier Accuracy (Shuffled Labels) ---
+   Shuffled test accuracy: 10.31 %
+[EXPECTED FAIL] Caught assertion: "Accuracy 10.31 % outside [98.32, 99.32] %"
+
+--- 4. Negative Control: Synthetic Speckle Bias ---
+[EXPECTED FAIL] Caught assertion: "Injected bias 44.01 % exceeds 0.5 % tolerance"
+
+--- 5. Negative Control: MERLIN Synthetic Self-Test ---
+[EXPECTED FAIL] Caught assertion: "Self-test median error 1.4432 outside [0.061, 0.101]"
+
+--- 6. Negative Control: MERLIN ENL Gain on Raw Data ---
+[EXPECTED FAIL] Caught assertion: "Raw data ENL gain 1.00 does not meet MERLIN target 21.4 +/- 1.5"
+
+--- 7. Negative Control: Scientific Domain Boundary Enforcement ---
+[PASS] Positive control: Valid complex data is accepted without error.
+[EXPECTED FAIL] Caught rejection: "MERLIN requires COMPLEX single-look SAR imagery (H x W >= 128x128). Detected real amplitude input (e.g. Sentinel-1 GRD). Operation is disabled in accordance with scientific boundaries."
+
+================ NEGATIVE CONTROLS SUMMARY ================
+    test1: 'PASS (Negative Control Caught)'
+    test2: 'PASS (Negative Control Caught)'
+    test3: 'PASS (Negative Control Caught)'
+    test4: 'PASS (Negative Control Caught)'
+    test5: 'PASS (Negative Control Caught)'
+    test6: 'PASS (Negative Control Caught)'
+    test7: 'PASS (Negative Control Caught)'
+
+>>> ALL 7 NEGATIVE CONTROLS VERIFIED TO ACTIVELY ASSERT AND FAIL <<<
+===================================================================
+```
+
+---
+
+## Gate G1: Adapters and Golden Tests (Full Recomputation Run)
+
+- **Command**: `matlab -batch "addpath('tests'); run_g1_tests;"`
+- **Date**: 2026-11-10 02:04:34
+- **Verdict**: PASS
+
+### Raw Command Output
+```
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==================== GATE G1 ADAPTERS & GOLDEN TESTS ====================
+Date: 2026-11-10 02:04:34
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+Running TestG1Adapters
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+[PASS] testMstarDatasetCounts: train 2747, test 2425, 10 classes verified.
+.gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+[PASS] testGotchaPass8ApertureAndResolution: 358 pulses x 432 freqs, -3 dB width X = 0.304 m (0.30 m +/- 10%).
+.[PASS] testClassifierAccuracy: Recomputed Seed 1 test accuracy = 99.30 % (within 98.82 +/- 0.50 %); 5-seed mean = 99.02 % (historical logged value).
+.[PASS] testSyntheticSpeckleBiases: Lee bias = +0.01 %, Gamma-MAP bias = -3.89 % (diffs: 0.000000e+00, 0.000000e+00).
+.[PASS] testMerlinSyntheticSelfTest: median |log(Rhat/R)| = 0.0817 (gate: 0.081 +/- 0.02).
+.[PASS] testMerlinEvaluationMetrics: Recomputed 400 chips: ENL gain = 21.39, bias = +1.96 %, diff = 1.699670e-07.
+.[PASS] testScientificDomainBoundaries: MERLIN correctly rejects real amplitude input.
+.
+Done TestG1Adapters
+__________
+
+
+----------------- Test Results Summary -----------------
+
+ans =
+
+  7 6 table
+
+                                    Name                                    Passed    Failed    Incomplete    Duration      Details   
+    ____________________________________________________________________    ______    ______    __________    ________    ____________
+
+    {'TestG1Adapters/testMstarDatasetCounts'                           }    true      false       false        1.7957     {1 1 struct}
+    {'TestG1Adapters/testGotchaPass8ApertureAndResolution'             }    true      false       false       0.52903     {1 1 struct}
+    {'TestG1Adapters/testClassifierAccuracy'                           }    true      false       false        9.8697     {1 1 struct}
+    {'TestG1Adapters/testSyntheticSpeckleBiasesAndNumericalEquivalence'}    true      false       false       0.13527     {1 1 struct}
+    {'TestG1Adapters/testMerlinSyntheticSelfTest'                      }    true      false       false        3.2313     {1 1 struct}
+    {'TestG1Adapters/testMerlinEvaluationMetrics'                      }    true      false       false        107.62     {1 1 struct}
+    {'TestG1Adapters/testScientificDomainBoundaries'                   }    true      false       false        0.1142     {1 1 struct}
+
+
+>>> GATE G1 RESULT: PASS (All 7 golden tests passed) <<<
+=========================================================================
+```
+
+

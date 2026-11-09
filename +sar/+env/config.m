@@ -12,6 +12,16 @@ end
 thisDir = fileparts(mfilename('fullpath'));
 rootDir = fileparts(fileparts(thisDir));
 
+% Ensure project root and package subdirectories are on MATLAB path
+subDirs = {rootDir, fullfile(rootDir, 'app'), fullfile(rootDir, 'research'), fullfile(rootDir, 'models')};
+pList = split(path, pathsep);
+for k = 1:numel(subDirs)
+    d = subDirs{k};
+    if exist(d, 'dir') && ~any(strcmpi(pList, d))
+        addpath(d);
+    end
+end
+
 configFile = fullfile(rootDir, 'sarconfig.json');
 exampleFile = fullfile(rootDir, 'sarconfig.example.json');
 
