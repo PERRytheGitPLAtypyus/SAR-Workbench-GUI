@@ -621,3 +621,98 @@ ans =
 ```
 
 
+
+## Gate G2a: Despeckle Tab Implementation & Verification
+
+### Context & Implementation
+- Programmatic `uifigure` Despeckle tab built directly in `app/SARWorkbench.m` calling `+sar` adapter functions only.
+- Components include:
+  1. Dynamic domain banner (`BannerDespeckle`) with state-dependent color styling and explicit advisory messages:
+     - Real amplitude + MERLIN: Red background `[SCIENTIFIC LIMIT]` stating MERLIN requires complex single-look imagery; Run Filter button disabled.
+     - Failed-validation Gotcha MERLIN: Red background `[FAILED VALIDATION]` warning of point-target distortion (peak ratio 0.39, widths 1.39/1.45).
+     - Operational MSTAR MERLIN: Amber background `[PHYSICAL LIMIT]` noting downstream classifier utility and point-target overshoot.
+     - Gamma-MAP: Amber background `[METHOD ADVISORY]` noting intrinsic -3.8% negative bias.
+     - Lee / Frost: Neutral background `[METHOD ADVISORY]` noting downstream classification gain parity with spatial augmentation and harm from over-smoothing.
+  2. Input dataset selector: MSTAR complex test chip (class dropdown + chip spinner), Gotcha Pass 8 complex aperture backprojection, Sentinel-1 GRD real amplitude crop, and User MAT file.
+  3. Despeckle algorithm & parameter panel populated dynamically from `sar.registry.despeckle(includeFailed)` with "Show Failed Methods" checkbox.
+  4. Three synchronized `uiaxes` displays: Raw SAR amplitude (dB), Filtered SAR amplitude (dB), and Speckle Ratio (Raw / Filtered).
+  5. Quantitative metrics panel: Clutter ENL (raw), Filtered ENL, ENL Gain, Intensity Bias, and elapsed computation time.
+
+### Verification Run
+- Command: `matlab -batch "run('scripts/test_g2a.m')"`
+- Date: 2026-11-17 04:36:29
+- Verbatim raw output:
+
+```
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==================== GATE G2A DESPECKLE TAB VERIFICATION ====================
+Date: 2026-11-17 04:36:29
+
+--- 1. App Launch & Tab Initialization ---
+[ Warning: Scrollable is set to 'on' on all figures because the Windows accessibility text size setting is greater than 100%.
+To prevent this behavior, revert the text size setting back to 100% and instead use the Windows system display scale setting to increase the size of on-screen elements.]  
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-17 04:36:33
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] App launched and DespeckleTab selected.
+[PASS] Default MSTAR chip loaded: MSTAR 2s1_gun #1
+
+--- 2. Lee Filter Numerical Equivalence (GUI vs Script) ---
+   Max absolute difference (GUI vs Script Lee): 0.000000e+00
+[PASS] Lee filter numerical equivalence verified (< 1e-6).
+
+--- 3. MERLIN Filter Numerical Equivalence (GUI vs Script) ---
+   Max absolute difference (GUI vs Script MERLIN): 0.000000e+00
+[PASS] MERLIN numerical equivalence verified (< 1e-6).
+
+--- 4. Amplitude Source Boundary Enforcement ---
+   Loaded Amplitude Source: Sentinel-1 GRD Crop (isreal=1)
+[PASS] MERLIN Run button correctly disabled for amplitude source.
+       Banner: "[SCIENTIFIC LIMIT] MERLIN requires COMPLEX single-look SAR imagery. Real amplitude data (e.g. Sentinel-1 GRD) is strictly prohibited. Run Filter is disabled."
+
+--- 5. Negative Control: Forcing MERLIN on Amplitude Data ---
+[EXPECTED FAIL] Caught rejection: "MERLIN requires COMPLEX single-look SAR imagery (H x W >= 128x128). Detected real amplitude input (e.g. Sentinel-1 GRD). Operation is disabled in accordance with scientific boundaries."
+[PASS] Negative control passed: direct MERLIN invocation rejected.
+
+--- 6. Failed-Validation Gotcha MERLIN Toggle ---
+[PASS] Failed-validation Gotcha MERLIN displayed with RED warning banner.
+       Banner: "[FAILED VALIDATION] Gotcha-trained MERLIN failed point-target validation (peak ratio 0.39, widths 1.39/1.45). Causes severe target distortion. Not approved for operational use."
+
+--- 7. Screenshot Export ---
+Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\despeckle_tab.png
+[PASS] Despeckle tab screenshot exported to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\despeckle_tab.png
+
+>>> GATE G2A RESULT: PASS <<<
+==============================================================================
+```
+
+### Artifacts Produced
+- `docs/despeckle_tab.png` (244 KB, timestamp: 2026-11-17 04:36:50)
+- `scripts/test_g2a.m` (Automated headless & programmatic test harness for Despeckle tab)

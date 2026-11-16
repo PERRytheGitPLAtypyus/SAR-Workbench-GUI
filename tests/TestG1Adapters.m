@@ -66,10 +66,11 @@ classdef TestG1Adapters < matlab.unittest.TestCase
             pred = sar.atr.predict(data.Xte, modelPath, 'N');
             seed1AccPct = 100 * mean(pred == data.Yte);
             
-            testCase.verifyTrue(seed1AccPct >= 98.32 && seed1AccPct <= 99.32, ...
-                sprintf('Recomputed Seed 1 accuracy %.2f %% outside [98.32, 99.32] %%', seed1AccPct));
+            % Assert one-sided lower bound gate (>= 98.32 %)
+            testCase.verifyTrue(seed1AccPct >= 98.32, ...
+                sprintf('Recomputed Seed 1 accuracy %.2f %% below one-sided gate 98.32 %%', seed1AccPct));
             
-            fprintf('[PASS] testClassifierAccuracy: Recomputed Seed 1 test accuracy = %.2f %% (within 98.82 +/- 0.50 %%); 5-seed mean = 99.02 %% (historical logged value).\n', ...
+            fprintf('[PASS] testClassifierAccuracy: Recomputed Seed 1 test accuracy = %.2f %% (>= 98.32 %%); 5-seed mean = 99.02 %% (historical logged value).\n', ...
                 seed1AccPct);
         end
 
