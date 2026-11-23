@@ -716,3 +716,320 @@ Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\despeckle
 ### Artifacts Produced
 - `docs/despeckle_tab.png` (244 KB, timestamp: 2026-11-17 04:36:50)
 - `scripts/test_g2a.m` (Automated headless & programmatic test harness for Despeckle tab)
+
+## Gate G2a Backfill Verification
+
+### Backfill Summary & Resolutions
+1. **Multi-Chip, Multi-Parameter Equivalence**:
+   - Reference: Frozen research functions `despeckle_filters.m` and `p3b_denoise.m`, called independently on raw chip data.
+   - Tested across 5 distinct target classes (`2s1_gun`, `bmp2_tank`, `btr70_transport`, `t72_tank`, `brdm2_truck`).
+   - Evaluated 4 parameter configurations per class:
+     - Lee (win=7, looks=1): max absolute difference = `0.000000e+00`
+     - Lee (win=5, looks=1): max absolute difference = `0.000000e+00`
+     - MERLIN (auto scale `M.s` = 0.0521): max absolute difference = `0.000000e+00`
+     - MERLIN (explicit scale = 0.06): max absolute difference = `0.000000e+00`
+2. **Equivalence Negative Control**:
+   - Perturbed parameter check: GUI Lee (win=7) vs Reference Lee (win=5) yields difference = `1.161290e-01` (> 0.01), proving that parameter perturbation fails the equivalence test and asserting detection sensitivity.
+3. **Metrics Panel Verification**:
+   - MSTAR chip metrics matched against `p3b_metrics`:
+     - Raw Clutter ENL: `0.51` (matches `m.enlRaw`)
+     - Filtered ENL: `1.92` (matches `m.enl`)
+     - ENL Gain: `3.79 x` (matches `m.gain`)
+     - Intensity Bias: `-0.90 %` (matches `100 * m.bias`)
+     - Peak Ratio: `0.75` (matches `m.peak`)
+   - Unsegmented sources (Gotcha, Sentinel-1): Clutter and peak metrics display `n/a` as clutter/target regions are unsegmented without user ROI.
+4. **MERLIN on Gotcha Source Banner**:
+   - Selecting MSTAR-trained MERLIN on Gotcha Pass 8 source triggers specific banner:
+     `[PHYSICAL LIMIT] MSTAR-trained MERLIN on Gotcha distorts point targets (peak ratio 1.54, half-power widths 1.72 / 1.54 m vs 0.30 m raw). Severe point-target broadening and overshoot.`
+5. **Consistency of Cached MERLIN Test Chips**:
+   - Verified that `mstar_merlin.mat` (`Xte_m`) is bit-for-bit identical to live `p3b_denoise` across 10 test chips (max difference across all 10 chips: `0.000000e+00`).
+
+---
+
+## Gate G2b: MSTAR ATR Tab Verification & Master Regression Run
+
+### Context & Implementation
+- Programmatic `uifigure` ATR tab implemented in `app/SARWorkbench.m` calling `+sar` adapter functions only.
+- Components include:
+  1. Dynamic domain banner (`BannerAtr`) reflecting training distribution vs mismatch:
+     - Neutral background for nominal `Raw (Nominal N)` (99.30% test accuracy).
+     - Red alert background `[PREPROCESSING MISMATCH]` for non-raw options (`Lee 7`, `Boxcar 7`, `MERLIN`), stating the exact live-measured test set accuracy for each.
+  2. Chip browser:
+     - Target class dropdown (10 MSTAR vehicle classes).
+     - Chip index spinner with dynamic limits per class.
+     - Azimuth angle display in degrees (from `azte`).
+     - File metadata label (from `pte`).
+  3. Preprocessing selector:
+     - `Raw (Nominal N)`, `Lee (7x7)`, `Boxcar (7x7)`, `MERLIN`.
+  4. Actions:
+     - "Classify Chip": Evaluates single chip, updates predicted class, match indicator, Top-1 confidence, and Top-3 class probabilities.
+     - "Evaluate Full Test Set (2425 Chips)": Recomputes predictions across all 2425 test chips and renders 10x10 normalized confusion chart.
+  5. Displays:
+     - `AxesAtrChip`: 128x128 SAR chip magnitude in dB scale [-40 0].
+     - Single-chip ATR output panel: Prediction, confidence, Top-3 probabilities, test accuracy summary.
+     - `PanelConfusion`: 10x10 confusion chart with row- and column-normalized summaries.
+     - Bottom summary panel: Live measured accuracy table across all 4 preprocessing modes.
+
+### Master Regression Suite Run
+- Command: `matlab -batch "run('tests/run_all_tests.m')"`
+- Date: 2026-11-23 19:07:39
+- Verbatim raw output:
+
+```
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==============================================================================
+           SAR WORKBENCH PHASE 5 COMPREHENSIVE REGRESSION SUITE
+Date: 2026-11-23 19:07:39
+Repo Root: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==============================================================================
+
+>>> STEP 1/5: RUNNING GATE G0 (ENVIRONMENT CHECK) <<<
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-23 19:07:39
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] Gate G0 passed cleanly.
+
+>>> STEP 2/5: VERIFYING PATH SELF-CONTAINMENT <<<
+[PASS] Path self-containment verified.
+
+>>> STEP 3/5: RUNNING GATE G1 (GOLDEN ADAPTER TESTS) <<<
+Running TestG1Adapters
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+[PASS] testMstarDatasetCounts: train 2747, test 2425, 10 classes verified.
+.gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+[PASS] testGotchaPass8ApertureAndResolution: 358 pulses x 432 freqs, -3 dB width X = 0.304 m (0.30 m +/- 10%).
+.[PASS] testClassifierAccuracy: Recomputed Seed 1 test accuracy = 99.30 % (>= 98.32 %); 5-seed mean = 99.02 % (historical logged value).
+.[PASS] testSyntheticSpeckleBiases: Lee bias = +0.01 %, Gamma-MAP bias = -3.89 % (diffs: 0.000000e+00, 0.000000e+00).
+.[PASS] testMerlinSyntheticSelfTest: median |log(Rhat/R)| = 0.0817 (gate: 0.081 +/- 0.02).
+.[PASS] testMerlinEvaluationMetrics: Recomputed 400 chips: ENL gain = 21.39, bias = +1.96 %, diff = 1.699670e-07.
+.[PASS] testScientificDomainBoundaries: MERLIN correctly rejects real amplitude input.
+.
+Done TestG1Adapters
+__________
+
+[PASS] Gate G1 passed (7/7 tests passed).
+
+>>> STEP 4/5: RUNNING GATE G2A (DESPECKLE TAB) <<<
+==================== GATE G2A DESPECKLE TAB VERIFICATION ====================
+Date: 2026-11-23 19:09:54
+Reference: Frozen research functions despeckle_filters.m and p3b_denoise.m, executed independently.
+
+--- 1. App Launch & Tab Initialization ---
+[ Warning: Scrollable is set to 'on' on all figures because the Windows accessibility text size setting is greater than 100%.
+To prevent this behavior, revert the text size setting back to 100% and instead use the Windows system display scale setting to increase the size of on-screen elements.]  
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-23 19:09:58
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.19 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] App launched and DespeckleTab selected.
+
+--- 2. Multi-Chip, Multi-Parameter Equivalence Checks ---
+Testing Class: 2s1_gun
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+Testing Class: bmp2_tank
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+Testing Class: btr70_transport
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+Testing Class: t72_tank
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+Testing Class: brdm2_truck
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+[PASS] All 5 classes and 4 parameter settings numerically verified against frozen research.
+
+--- 3. Negative Control: Parameter Perturbation Detection ---
+   Perturbed parameter diff (GUI Lee 7 vs Ref Lee 5): 1.161290e-01
+[PASS] Negative control passed: equivalence check correctly catches parameter discrepancy.
+
+--- 4. Metrics Panel Verification ---
+   GUI Metric Displays:
+     Raw Clutter ENL: 0.51
+     Filtered ENL: 1.92
+     ENL Gain: 3.79 x
+     Intensity Bias: -0.90 %
+     Peak Ratio: 0.75
+[PASS] MSTAR metrics panel matches p3b_metrics exactly.
+gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+[PASS] Unsegmented Gotcha source displays n/a for undefined clutter/target metrics.
+
+--- 5. MERLIN (MSTAR Net) on Gotcha Source Banner Check ---
+   Banner: "[PHYSICAL LIMIT] MSTAR-trained MERLIN on Gotcha distorts point targets (peak ratio 1.54, half-power widths 1.72 / 1.54 m vs 0.30 m raw). Severe point-target broadening and overshoot."
+[PASS] MERLIN on Gotcha triggers specific point-target distortion banner.
+
+--- 6. Amplitude Source Boundary Enforcement ---
+[PASS] MERLIN Run button disabled on amplitude source.
+[PASS] Direct invocation negative control rejected with: "MERLIN requires COMPLEX single-look SAR imagery (H x W >= 128x128). Detected real amplitude input (e.g. Sentinel-1 GRD). Operation is disabled in accordance with scientific boundaries."
+
+--- 7. Failed-Validation Gotcha MERLIN Toggle Check ---
+[PASS] Failed-validation Gotcha MERLIN displayed with RED warning banner.
+
+--- 8. Screenshot Export ---
+Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\despeckle_tab.png
+[PASS] Despeckle tab screenshot exported to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\despeckle_tab.png
+
+>>> GATE G2A RESULT: PASS (All Backfill Conditions Satisfied) <<<
+==============================================================================
+[PASS] Gate G2a passed cleanly.
+
+>>> STEP 5/5: RUNNING GATE G2B (MSTAR ATR TAB) <<<
+==================== GATE G2B MSTAR ATR TAB VERIFICATION ====================
+Date: 2026-11-23 19:10:20
+Reference: Frozen research function p4b_predict.m and models/cnn_mstar.mat.
+
+--- 1. App Launch & Tab Initialization ---
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-23 19:10:21
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.19 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] App launched and AtrTab selected.
+
+--- 2. Chip Browser & Metadata Navigation ---
+   Selected: Class=t72_tank, ChipIdx=5
+   Displayed Azimuth: Azimuth: 278.8 deg
+   Target Info      : File: HB03338.015 (idx 5/196)
+[PASS] Chip browser navigation and display verified.
+
+--- 3. Single-Chip Prediction & Scores Equivalence ---
+   Max score difference (sar.atr.predict vs p4b_predict): 0.000000e+00
+   GUI Display: Predicted: t72_tank (Match: YES)
+[PASS] Single-chip prediction and scores equivalence verified (< 1e-6).
+
+--- 4. Negative Control: Preprocessing Shift Detection ---
+   Preprocessing shift diff (Raw vs Lee 7 scores): 2.393891e-01
+[PASS] Negative control passed: preprocessing shift cleanly detected (> 0.05).
+
+--- 5. Full Test Set Recomputation (2425 Chips) ---
+   Full Test Set [RAW]:
+Accuracy: 99.30 % (2408 / 2425)
+[PASS] Full test set accuracy recomputed = 99.30 % (2408 / 2425).
+
+--- 6. Live Preprocessing Mismatch Evaluation & Banner Enforcement ---
+
+Preprocessing      | Measured Accuracy | Degradation  | Banner Alert
+--------------------------------------------------------------------------------
+raw                |  99.30 % (2408/2425) | Nominal (0.00 pp) | Neutral   
+lee                |  50.39 % (1222/2425) | -48.91 pp    | RED Mismatch
+boxcar             |  33.32 % ( 808/2425) | -65.98 pp    | RED Mismatch
+merlin             |  46.80 % (1135/2425) | -52.50 pp    | RED Mismatch
+--------------------------------------------------------------------------------
+[PASS] All 4 preprocessing modes live measured and banner alerts verified.
+
+--- 7. Screenshot Export ---
+Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\atr_tab.png
+[PASS] ATR tab screenshot exported to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\atr_tab.png
+
+>>> GATE G2B RESULT: PASS <<<
+==============================================================================
+[PASS] Gate G2b passed cleanly.
+
+==============================================================================
+>>> ALL PHASE 5 GATES AND REGRESSION TESTS PASSED IN 179.80 SECONDS <<<
+==============================================================================
+```
+
+### Artifacts Produced
+- `docs/atr_tab.png` (182 KB, timestamp: 2026-11-23 19:10:38)
+- `docs/despeckle_tab.png` (257 KB, timestamp: 2026-11-23 19:10:19)
+- `scripts/test_g2b.m` (Automated verification script for ATR tab)
+- `tests/run_all_tests.m` (Comprehensive regression suite across G0, Path, G1, G2a, G2b)
