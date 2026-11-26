@@ -92,41 +92,77 @@ fprintf('   Perturbed parameter diff (GUI Lee 7 vs Ref Lee 5): %e\n', diffPertur
 assert(diffPerturb > 0.01, 'Negative control failed: perturbed parameter must produce significant diff');
 fprintf('[PASS] Negative control passed: equivalence check correctly catches parameter discrepancy.\n');
 
-% 4. Metrics Panel Verification
-fprintf('\n--- 4. Metrics Panel Verification ---\n');
-% A. MSTAR chip metrics check
-app.DropdownMethod.Value = 'lee';
-app.SpinnerWin.Value = 7;
-app.SpinnerLooks.Value = 1;
-app.onMethodChanged();
-app.runDespeckleFilter();
+% 4. Metrics Panel Verification (Lee & MERLIN on 5 chips from different classes)
+fprintf('\n--- 4. Metrics Panel Verification (Lee & MERLIN across 5 Classes) ---\n');
+for c = 1:numel(testClasses)
+    clsName = testClasses{c};
+    app.DropdownSourceType.Value = 'MSTAR Complex Test Chip';
+    app.onSourceTypeChanged();
+    app.DropdownMstarClass.Value = clsName;
+    app.SpinnerChipIdx.Value = 1;
+    app.onMstarClassChanged();
+    drawnow;
+    
+    rawZ = app.CurrentRawData;
+    rawAmp = single(abs(rawZ));
+    I_raw = double(rawAmp).^2;
+    
+    % Test 4.1: Lee 7x7 metrics
+    app.DropdownMethod.Value = 'lee';
+    app.SpinnerWin.Value = 7;
+    app.SpinnerLooks.Value = 1;
+    app.onMethodChanged();
+    app.runDespeckleFilter();
+    
+    I_filtLee = double(app.CurrentFilteredData).^2;
+    mRefLee = p3b_metrics(I_raw, I_filtLee, 32, 41:88);
+    
+    valRawENL  = sscanf(app.LabelMetricRawENL.Text, 'Raw Clutter ENL: %f');
+    valFiltENL = sscanf(app.LabelMetricFiltENL.Text, 'Filtered ENL: %f');
+    valGain    = sscanf(app.LabelMetricENLGain.Text, 'ENL Gain: %f x');
+    valBias    = sscanf(app.LabelMetricBias.Text, 'Intensity Bias: %f %%');
+    valPeak    = sscanf(app.LabelMetricPeakRatio.Text, 'Peak Ratio: %f');
+    
+    assert(abs(valRawENL - mRefLee.enlRaw) < 0.05, 'Lee Raw ENL must match p3b_metrics');
+    assert(abs(valFiltENL - mRefLee.enl) < 0.05, 'Lee Filtered ENL must match p3b_metrics');
+    assert(abs(valGain - mRefLee.gain) < 0.05, 'Lee ENL Gain must match p3b_metrics');
+    assert(abs(valBias - 100*mRefLee.bias) < 0.05, 'Lee Bias must match p3b_metrics');
+    assert(abs(valPeak - mRefLee.peak) < 0.05, 'Lee Peak ratio must match p3b_metrics');
+    
+    % Test 4.2: MERLIN metrics
+    app.DropdownMethod.Value = 'merlin_mstar';
+    app.EditMerlinScale.Value = 'auto';
+    app.onMethodChanged();
+    app.runDespeckleFilter();
+    
+    I_filtMerlin = double(app.CurrentFilteredData).^2;
+    mRefMerlin = p3b_metrics(I_raw, I_filtMerlin, 32, 41:88);
+    
+    valRawENL_m  = sscanf(app.LabelMetricRawENL.Text, 'Raw Clutter ENL: %f');
+    valFiltENL_m = sscanf(app.LabelMetricFiltENL.Text, 'Filtered ENL: %f');
+    valGain_m    = sscanf(app.LabelMetricENLGain.Text, 'ENL Gain: %f x');
+    valBias_m    = sscanf(app.LabelMetricBias.Text, 'Intensity Bias: %f %%');
+    valPeak_m    = sscanf(app.LabelMetricPeakRatio.Text, 'Peak Ratio: %f');
+    
+    assert(abs(valRawENL_m - mRefMerlin.enlRaw) < 0.05, 'MERLIN Raw ENL must match p3b_metrics');
+    assert(abs(valFiltENL_m - mRefMerlin.enl) < 0.05, 'MERLIN Filtered ENL must match p3b_metrics');
+    assert(abs(valGain_m - mRefMerlin.gain) < 0.05, 'MERLIN ENL Gain must match p3b_metrics');
+    assert(abs(valBias_m - 100*mRefMerlin.bias) < 0.05, 'MERLIN Bias must match p3b_metrics');
+    assert(abs(valPeak_m - mRefMerlin.peak) < 0.05, 'MERLIN Peak ratio must match p3b_metrics');
+    
+    fprintf('   Class %-15s: Lee (gain=%.2fx, bias=%+.2f%%) | MERLIN (gain=%.2fx, bias=%+.2f%%) [MATCH]\n', ...
+        clsName, mRefLee.gain, 100*mRefLee.bias, mRefMerlin.gain, 100*mRefMerlin.bias);
+end
+fprintf('[PASS] Metrics panel matches p3b_metrics across all 5 classes for both Lee and MERLIN.\n');
 
-I_raw = double(rawAmp).^2;
-I_filt = double(app.CurrentFilteredData).^2;
-mRef = p3b_metrics(I_raw, I_filt, 32, 41:88);
-
-txtRawENL = app.LabelMetricRawENL.Text;
-txtFiltENL = app.LabelMetricFiltENL.Text;
-txtGain = app.LabelMetricENLGain.Text;
-txtBias = app.LabelMetricBias.Text;
-txtPeak = app.LabelMetricPeakRatio.Text;
-
-fprintf('   GUI Metric Displays:\n');
-fprintf('     %s\n     %s\n     %s\n     %s\n     %s\n', ...
-    txtRawENL, txtFiltENL, txtGain, txtBias, txtPeak);
-
-valRawENL = sscanf(txtRawENL, 'Raw Clutter ENL: %f');
-valFiltENL = sscanf(txtFiltENL, 'Filtered ENL: %f');
-valGain = sscanf(txtGain, 'ENL Gain: %f x');
-valBias = sscanf(txtBias, 'Intensity Bias: %f %%');
-valPeak = sscanf(txtPeak, 'Peak Ratio: %f');
-
-assert(abs(valRawENL - mRef.enlRaw) < 0.05, 'Raw ENL must match p3b_metrics');
-assert(abs(valFiltENL - mRef.enl) < 0.05, 'Filtered ENL must match p3b_metrics');
-assert(abs(valGain - mRef.gain) < 0.05, 'ENL Gain must match p3b_metrics');
-assert(abs(valBias - 100*mRef.bias) < 0.05, 'Bias must match p3b_metrics');
-assert(abs(valPeak - mRef.peak) < 0.05, 'Peak ratio must match p3b_metrics');
-fprintf('[PASS] MSTAR metrics panel matches p3b_metrics exactly.\n');
+% 4.3 Negative Control: Clutter Mask Perturbation
+fprintf('   --- Metrics Panel Negative Control (Clutter Mask Perturbation) ---\n');
+mRefPerturb = p3b_metrics(I_raw, I_filtMerlin, 16, 20:60);
+diffGain = abs(mRefMerlin.gain - mRefPerturb.gain);
+diffBias = abs(mRefMerlin.bias - mRefPerturb.bias);
+fprintf('     Clutter mask shift: Gain diff = %.2f, Bias diff = %.4f\n', diffGain, diffBias);
+assert(diffGain > 0.5 || diffBias > 0.01, 'Negative control must detect clutter mask shift');
+fprintf('[PASS] Metrics negative control passed: metric calculation is strictly sensitive to clutter region.\n');
 
 % B. Unsegmented Gotcha Source metrics check
 app.DropdownSourceType.Value = 'Gotcha Pass 8 (Complex)';

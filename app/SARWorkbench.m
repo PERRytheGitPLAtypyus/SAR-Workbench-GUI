@@ -103,6 +103,41 @@ classdef SARWorkbench < handle
         AtrData                 struct
         AtrModel                struct
         CachedMerlinTe          single
+
+        % Gotcha Tab UI Components
+        BannerGotcha            matlab.ui.container.Panel
+        LabelGotchaBanner       matlab.ui.control.Label
+        
+        DropdownGotchaPol       matlab.ui.control.DropDown
+        SpinnerGotchaAzStart    matlab.ui.control.Spinner
+        SpinnerGotchaAzWidth    matlab.ui.control.Spinner
+        SpinnerGotchaDx         matlab.ui.control.Spinner
+        SpinnerGotchaZ          matlab.ui.control.Spinner
+        ButtonGotchaForm        matlab.ui.control.Button
+        
+        SpinnerGotchaClimMin    matlab.ui.control.Spinner
+        SpinnerGotchaClimMax    matlab.ui.control.Spinner
+        CheckGotchaOverlay      matlab.ui.control.CheckBox
+        DropdownGotchaTarget    matlab.ui.control.DropDown
+        ButtonGotchaInspect     matlab.ui.control.Button
+        
+        AxesGotcha              matlab.ui.control.UIAxes
+        
+        LabelGotchaTargetName   matlab.ui.control.Label
+        LabelGotchaTargetPeak   matlab.ui.control.Label
+        LabelGotchaTargetOffset matlab.ui.control.Label
+        LabelGotchaTargetWx     matlab.ui.control.Label
+        LabelGotchaTargetWy     matlab.ui.control.Label
+        LabelGotchaTargetWmean  matlab.ui.control.Label
+        LabelGotchaCalibStatus  matlab.ui.control.Label
+        
+        % Gotcha State Data
+        GotchaImage             single
+        GotchaXv                double
+        GotchaYv                double
+        GotchaOptions           struct
+        GotchaTargetStats       struct
+        GotchaIsCancelled       logical = false
     end
 
     methods (Static)
@@ -132,6 +167,7 @@ classdef SARWorkbench < handle
             refreshEnvironment(app);
             initDespeckleTab(app);
             initAtrTab(app);
+            initGotchaTab(app);
             if nargout == 0
                 % Do not assign if called without LHS
             end
@@ -187,10 +223,12 @@ classdef SARWorkbench < handle
 
     methods
         function createComponents(app)
-            % Main Figure Window
+            % Main Figure Window with size change constraint
             app.UIFigure = uifigure('Name', 'SAR Workbench - Phase 5', ...
                 'Position', [100 100 1100 750], ...
-                'Color', [0.95 0.95 0.96]);
+                'Color', [0.95 0.95 0.96], ...
+                'AutoResizeChildren', 'off', ...
+                'SizeChangedFcn', @(~,~) handleCallback(app, @() onFigureSizeChanged(app)));
 
             % Top tab group
             app.TabGroup = uitabgroup(app.UIFigure, ...
@@ -200,7 +238,7 @@ classdef SARWorkbench < handle
             app.HomeTab      = uitab(app.TabGroup, 'Title', ' Home & Environment ');
             app.DespeckleTab = uitab(app.TabGroup, 'Title', ' Despeckling ');
             app.AtrTab       = uitab(app.TabGroup, 'Title', ' MSTAR ATR ');
-            app.GotchaTab    = uitab(app.TabGroup, 'Title', ' Gotcha Backprojection ');
+            app.GotchaTab    = uitab(app.TabGroup, 'Title', ' Gotcha Planar Backprojection ');
             app.SimulateTab  = uitab(app.TabGroup, 'Title', ' Simulation ');
             app.ResultsTab   = uitab(app.TabGroup, 'Title', ' Research Results ');
 
@@ -208,9 +246,23 @@ classdef SARWorkbench < handle
             buildHomeTab(app);
             buildDespeckleTab(app);
             buildAtrTab(app);
-            buildGotchaTabPlaceholder(app);
+            buildGotchaTab(app);
             buildSimulateTabPlaceholder(app);
             buildResultsTabPlaceholder(app);
+        end
+
+        function onFigureSizeChanged(app)
+            if isempty(app.UIFigure) || ~isvalid(app.UIFigure), return; end
+            pos = app.UIFigure.Position;
+            minW = 1100; minH = 750;
+            w = max(pos(3), minW);
+            h = max(pos(4), minH);
+            if pos(3) < minW || pos(4) < minH
+                app.UIFigure.Position = [pos(1) pos(2) w h];
+            end
+            if ~isempty(app.TabGroup) && isvalid(app.TabGroup)
+                app.TabGroup.Position = [10 10 max(1080, w - 20) max(730, h - 20)];
+            end
         end
 
         function buildHomeTab(app)
@@ -433,6 +485,7 @@ classdef SARWorkbench < handle
                 'Text', 'Select an input dataset and despeckling method to begin.', ...
                 'FontName', 'Segoe UI', 'FontSize', 11, 'FontWeight', 'bold', ...
                 'FontColor', [0.2 0.2 0.2], ...
+                'WordWrap', 'on', ...
                 'Position', [15 5 1010 44]);
 
             % 3. Input Source Selection Panel
@@ -1022,17 +1075,9 @@ classdef SARWorkbench < handle
                     app.BannerAtr.BackgroundColor = cNeutral;
                     app.LabelAtrBanner.Text = '[TRAINING DISTRIBUTION] Nominal evaluation under Normalisation N. Model achieved 99.30% test accuracy (Seed 1; 5-seed mean: 99.02%).';
                     app.LabelAtrBanner.FontColor = [0.1 0.2 0.4];
-                case 'lee'
+                case {'lee', 'boxcar', 'merlin'}
                     app.BannerAtr.BackgroundColor = cRed;
-                    app.LabelAtrBanner.Text = '[PREPROCESSING MISMATCH] Classifier trained on RAW chips. Mismatched Lee 7 test accuracy collapses to 50.39% (vs 99.30% raw). Preprocessing mismatch degrades performance.';
-                    app.LabelAtrBanner.FontColor = [0.7 0.1 0.1];
-                case 'boxcar'
-                    app.BannerAtr.BackgroundColor = cRed;
-                    app.LabelAtrBanner.Text = '[PREPROCESSING MISMATCH] Classifier trained on RAW chips. Mismatched Boxcar 7 test accuracy collapses to 33.32% (vs 99.30% raw). Preprocessing mismatch degrades performance.';
-                    app.LabelAtrBanner.FontColor = [0.7 0.1 0.1];
-                case 'merlin'
-                    app.BannerAtr.BackgroundColor = cRed;
-                    app.LabelAtrBanner.Text = '[PREPROCESSING MISMATCH] Classifier trained on RAW chips. Mismatched MERLIN test accuracy collapses to 46.80% (vs 99.30% raw). Preprocessing mismatch degrades performance.';
+                    app.LabelAtrBanner.Text = '[PREPROCESSING MISMATCH] Model trained on RAW chips; evaluating on despeckled chips collapses test accuracy (Lee 7: 50.39%, MERLIN: 46.80%, Boxcar 7: 33.32% vs 99.30% raw). Despeckled chips require a classifier trained on despeckled chips; the research gain at <=10% labels is not reproduced by this tab.';
                     app.LabelAtrBanner.FontColor = [0.7 0.1 0.1];
             end
         end
@@ -1156,14 +1201,326 @@ classdef SARWorkbench < handle
             app.ConfusionChartObj.ColumnSummary = 'column-normalized';
         end
 
-        function buildGotchaTabPlaceholder(app)
+        function initGotchaTab(app)
+            % Initialize Gotcha tab components, target table, and default backprojected slice
+            try
+                populateGotchaTargets(app);
+                formGotchaImage(app);
+            catch ME
+                warning('SARWorkbench:initGotchaTab', 'Gotcha initialization error: %s', ME.message);
+            end
+        end
+
+        function buildGotchaTab(app)
             parent = app.GotchaTab;
-            uilabel(parent, 'Text', 'AFRL Gotcha Volumetric Backprojection Image Formation', ...
+
+            % 1. Title Header
+            uilabel(parent, 'Text', 'AFRL Gotcha Planar Backprojection Image Formation (z = -0.3 m)', ...
                 'FontName', 'Segoe UI', 'FontSize', 16, 'FontWeight', 'bold', ...
-                'Position', [30 650 650 30]);
-            uilabel(parent, 'Text', 'Feature implementation scheduled for Gate G2c verification.', ...
-                'FontName', 'Segoe UI', 'FontSize', 12, 'FontColor', [0.4 0.4 0.4], ...
-                'Position', [30 620 500 20]);
+                'Position', [20 680 850 26]);
+
+            % 2. Scientific Advisory Banner (Planar Backprojection Limits)
+            app.BannerGotcha = uipanel(parent, 'Position', [20 615 1040 58], ...
+                'BackgroundColor', [0.98 0.95 0.88], 'BorderType', 'line', ...
+                'HighlightColor', [0.90 0.80 0.60]);
+            app.LabelGotchaBanner = uilabel(app.BannerGotcha, ...
+                'Position', [15 5 1010 46], ...
+                'WordWrap', 'on', 'FontName', 'Segoe UI', 'FontSize', 11, ...
+                'FontWeight', 'bold', 'FontColor', [0.45 0.30 0.05], ...
+                'Text', 'Planar backprojection (z = -0.3 m). Unexplained look-dependent offsets of 0.15 - 0.75 m relative to ground truth survey. Autofocus corrections not applied (afr=afp=0). Phase Gradient Autofocus (PGA) not implemented.');
+
+            % 3. Aperture & Grid Controls Panel
+            pnlForm = uipanel(parent, 'Title', '1. Gotcha Aperture & Grid Parameters', ...
+                'FontName', 'Segoe UI', 'FontWeight', 'bold', 'FontSize', 12, ...
+                'Position', [20 475 510 130]);
+
+            uilabel(pnlForm, 'Text', 'Pol:', 'Position', [15 67 35 22], 'FontWeight', 'bold');
+            app.DropdownGotchaPol = uidropdown(pnlForm, ...
+                'Items', {'HH', 'VV (not validated)', 'HV (not validated)', 'VH (not validated)'}, ...
+                'ItemsData', {'HH', 'VV', 'HV', 'VH'}, ...
+                'Value', 'HH', 'Position', [50 65 140 26]);
+
+            uilabel(pnlForm, 'Text', 'Az Start:', 'Position', [200 67 60 22], 'FontWeight', 'bold');
+            app.SpinnerGotchaAzStart = uispinner(pnlForm, ...
+                'Limits', [1 360], 'Value', 1, 'Position', [265 65 55 26], ...
+                'ValueChangedFcn', @(~,~) handleCallback(app, @() onGotchaApertureChanged(app)));
+
+            uilabel(pnlForm, 'Text', 'Az Span:', 'Position', [330 67 60 22], 'FontWeight', 'bold');
+            app.SpinnerGotchaAzWidth = uispinner(pnlForm, ...
+                'Limits', [1 10], 'Value', 3, 'Position', [390 65 50 26], ...
+                'ValueChangedFcn', @(~,~) handleCallback(app, @() onGotchaApertureChanged(app)));
+
+            uilabel(pnlForm, 'Text', 'dx (m):', 'Position', [15 20 50 22], 'FontWeight', 'bold');
+            app.SpinnerGotchaDx = uispinner(pnlForm, ...
+                'Limits', [0.05 1.0], 'Step', 0.05, 'Value', 0.30, 'Position', [70 18 55 26]);
+
+            uilabel(pnlForm, 'Text', 'z (m):', 'Position', [135 20 40 22], 'FontWeight', 'bold');
+            app.SpinnerGotchaZ = uispinner(pnlForm, ...
+                'Limits', [-5.0 5.0], 'Step', 0.1, 'Value', -0.3, 'Position', [175 18 55 26]);
+
+            app.ButtonGotchaForm = uibutton(pnlForm, 'Text', 'Form Image', ...
+                'FontWeight', 'bold', 'FontSize', 12, ...
+                'Position', [250 14 240 34], ...
+                'BackgroundColor', [0.15 0.55 0.85], 'FontColor', [1 1 1], ...
+                'ButtonPushedFcn', @(~,~) handleCallback(app, @() formGotchaImage(app)));
+
+            % 4. Display Range & Target Overlay Panel
+            pnlDisp = uipanel(parent, 'Title', '2. Dynamic Range & Reflector Overlay', ...
+                'FontName', 'Segoe UI', 'FontWeight', 'bold', 'FontSize', 12, ...
+                'Position', [550 475 510 130]);
+
+            uilabel(pnlDisp, 'Text', 'Clim (dB):', 'Position', [15 67 65 22], 'FontWeight', 'bold');
+            app.SpinnerGotchaClimMin = uispinner(pnlDisp, ...
+                'Limits', [-100 -10], 'Step', 5, 'Value', -45, 'Position', [85 65 55 26], ...
+                'ValueChangedFcn', @(~,~) handleCallback(app, @() onGotchaDisplayChanged(app)));
+            uilabel(pnlDisp, 'Text', 'to', 'Position', [148 67 20 22]);
+            app.SpinnerGotchaClimMax = uispinner(pnlDisp, ...
+                'Limits', [-10 10], 'Step', 5, 'Value', 0, 'Position', [170 65 55 26], ...
+                'ValueChangedFcn', @(~,~) handleCallback(app, @() onGotchaDisplayChanged(app)));
+
+            app.CheckGotchaOverlay = uicheckbox(pnlDisp, ...
+                'Text', 'Overlay Matching Reflector Survey', 'Value', true, ...
+                'FontWeight', 'bold', 'Position', [245 67 250 22], ...
+                'ValueChangedFcn', @(~,~) handleCallback(app, @() onGotchaDisplayChanged(app)));
+
+            uilabel(pnlDisp, 'Text', 'Target:', 'Position', [15 20 50 22], 'FontWeight', 'bold');
+            app.DropdownGotchaTarget = uidropdown(pnlDisp, ...
+                'Position', [70 18 240 26], ...
+                'ValueChangedFcn', @(~,~) handleCallback(app, @() onGotchaTargetChanged(app)));
+
+            app.ButtonGotchaInspect = uibutton(pnlDisp, 'Text', 'Inspect Resolution', ...
+                'FontWeight', 'bold', 'Position', [330 14 160 34], ...
+                'ButtonPushedFcn', @(~,~) handleCallback(app, @() inspectCurrentTarget(app)));
+
+            % 5. Image Axes Display
+            app.AxesGotcha = uiaxes(parent, 'Position', [20 145 610 320]);
+            title(app.AxesGotcha, 'Gotcha Planar Backprojection (dB)');
+            axis(app.AxesGotcha, 'image', 'xy'); colormap(app.AxesGotcha, 'gray');
+            xlabel(app.AxesGotcha, 'X (Range, m)'); ylabel(app.AxesGotcha, 'Y (Cross-Range, m)');
+
+            % 6. Point Target Analysis Panel
+            pnlStats = uipanel(parent, 'Title', '3. Point Target Resolution & Survey Offset', ...
+                'FontName', 'Segoe UI', 'FontWeight', 'bold', 'FontSize', 12, ...
+                'Position', [650 145 410 320]);
+
+            app.LabelGotchaTargetName = uilabel(pnlStats, 'Text', 'Target: --', ...
+                'FontWeight', 'bold', 'FontSize', 11, 'Position', [15 255 380 25]);
+
+            app.LabelGotchaTargetPeak = uilabel(pnlStats, 'Text', 'Peak: --', ...
+                'FontSize', 11, 'Position', [15 220 380 25]);
+
+            app.LabelGotchaTargetOffset = uilabel(pnlStats, 'Text', 'Offset from Survey: --', ...
+                'FontSize', 11, 'Position', [15 185 380 25]);
+
+            app.LabelGotchaTargetWx = uilabel(pnlStats, 'Text', 'Range -3 dB Width (wx): --', ...
+                'FontSize', 11, 'Position', [15 150 380 25]);
+
+            app.LabelGotchaTargetWy = uilabel(pnlStats, 'Text', 'Azimuth -3 dB Width (wy): --', ...
+                'FontSize', 11, 'Position', [15 115 380 25]);
+
+            app.LabelGotchaTargetWmean = uilabel(pnlStats, 'Text', 'Mean Resolution: --', ...
+                'FontSize', 11, 'Position', [15 80 380 25]);
+
+            app.LabelGotchaCalibStatus = uilabel(pnlStats, 'Text', 'Target status pending.', ...
+                'WordWrap', 'on', 'FontWeight', 'bold', 'Position', [15 10 380 65]);
+
+            % 7. Summary & Catalog Reference Panel
+            pnlSummary = uipanel(parent, 'Title', '4. Visible Target Catalog & Ground Truth Geometry', ...
+                'FontName', 'Segoe UI', 'FontWeight', 'bold', 'FontSize', 12, ...
+                'Position', [20 15 1040 120]);
+
+            sumText = sprintf([ ...
+                '  • Calibration Target: Target 2 (15TR03C) at [-28.09, 38.67] m, heading 90 deg. Target resolution: 0.30 m +/- 10%% (measured wx = 0.304 m with dx=0.15 m; 0.318 m with dx=0.30 m).\n' ...
+                '  • Aperture Look Headings: Az 1-3 -> Heading 90 deg | Az 86-88 -> Heading 0 deg | Az 176-178 -> Heading 270 deg | Az 266-268 -> Heading 180 deg.\n' ...
+                '  • Reflector Visibility: 13 visible target/aperture pairs confirmed across the 4 cardinal test apertures (Ap 1: 2, Ap 2: 5, Ap 3: 3, Ap 4: 3).\n' ...
+                '  • Known Offsets: Unexplained 0.15 - 0.75 m offset relative to ground truth survey is an inherent characteristic of the unautofocused planar backprojection dataset.']);
+            uilabel(pnlSummary, 'Text', sumText, ...
+                'FontName', 'Consolas', 'FontSize', 9.5, 'WordWrap', 'on', ...
+                'Position', [15 10 1010 85]);
+        end
+
+        function populateGotchaTargets(app)
+            [mk, hd, names] = sar.imaging.gotcha.reflectorTable();
+            items = cell(size(names));
+            for i = 1:numel(names)
+                items{i} = sprintf('%s (Tgt %d, hd: %d deg)', names{i}, i, hd(i));
+            end
+            app.DropdownGotchaTarget.Items = items;
+            app.DropdownGotchaTarget.ItemsData = 1:numel(names);
+            app.DropdownGotchaTarget.Value = 2; % Default: calibration target 2 (15TR03C)
+        end
+
+        function onGotchaApertureChanged(app)
+            azStart = round(app.SpinnerGotchaAzStart.Value);
+            azWidth = round(app.SpinnerGotchaAzWidth.Value);
+            azEnd = azStart + azWidth - 1;
+            expHead = sar.imaging.gotcha.expectedHeadingForAperture(azStart, azEnd);
+            [~, hd, ~] = sar.imaging.gotcha.reflectorTable();
+            matchingTgts = find(hd == expHead);
+            if ~isempty(matchingTgts) && ~ismember(app.DropdownGotchaTarget.Value, matchingTgts)
+                app.DropdownGotchaTarget.Value = matchingTgts(1);
+            end
+            formGotchaImage(app);
+        end
+
+        function onGotchaTargetChanged(app)
+            inspectCurrentTarget(app);
+        end
+
+        function onGotchaDisplayChanged(app)
+            updateGotchaDisplay(app);
+        end
+
+        function formGotchaImage(app)
+            SARWorkbench.ensurePaths();
+            cfg = sar.env.config();
+
+            pol = app.DropdownGotchaPol.Value;
+            azStart = round(app.SpinnerGotchaAzStart.Value);
+            azWidth = round(app.SpinnerGotchaAzWidth.Value);
+            azList = azStart:(azStart + azWidth - 1);
+
+            dx = app.SpinnerGotchaDx.Value;
+            z = app.SpinnerGotchaZ.Value;
+
+            options = struct('xlim', [-44 6], 'ylim', [10 58], 'dx', dx, 'z', z, ...
+                'pad', 8, 'conj', 0, 'afr', 0, 'afp', 0);
+
+            app.GotchaIsCancelled = false;
+            dlg = [];
+            if ~isempty(app.UIFigure) && isvalid(app.UIFigure)
+                try
+                    dlg = uiprogressdlg(app.UIFigure, 'Title', 'Forming Gotcha Image', ...
+                        'Message', 'Loading phase history...', 'Cancelable', true);
+                catch
+                    dlg = [];
+                end
+            end
+
+            G = sar.imaging.gotcha.loadAperture(cfg.dataPath.gotcha, 8, pol, azList);
+
+            progressFn = @(frac) app.updateGotchaProgress(frac, dlg);
+            cancelFn = @() app.checkGotchaCancel(dlg);
+
+            [img, xv, yv, wasCancelled] = sar.imaging.gotcha.backprojectWithProgress(G, options, progressFn, cancelFn);
+            if ~isempty(dlg) && isvalid(dlg), close(dlg); end
+
+            if wasCancelled
+                return;
+            end
+
+            app.GotchaImage = single(img);
+            app.GotchaXv = xv;
+            app.GotchaYv = yv;
+            app.GotchaOptions = options;
+
+            updateGotchaDisplay(app);
+            inspectCurrentTarget(app);
+        end
+
+        function updateGotchaProgress(~, frac, dlg)
+            if ~isempty(dlg) && isvalid(dlg)
+                dlg.Value = min(1, max(0, frac));
+                dlg.Message = sprintf('Forming backprojection slice: %d%%', round(frac * 100));
+                drawnow;
+            end
+        end
+
+        function cancel = checkGotchaCancel(~, dlg)
+            cancel = false;
+            if ~isempty(dlg) && isvalid(dlg)
+                cancel = dlg.CancelRequested;
+            end
+        end
+
+        function updateGotchaDisplay(app)
+            if isempty(app.GotchaImage), return; end
+
+            imgDb = 20*log10(abs(app.GotchaImage) / max(abs(app.GotchaImage(:))) + eps);
+            imagesc(app.AxesGotcha, app.GotchaXv, app.GotchaYv, imgDb);
+            colormap(app.AxesGotcha, 'gray');
+            axis(app.AxesGotcha, 'image', 'xy');
+            cmin = app.SpinnerGotchaClimMin.Value;
+            cmax = app.SpinnerGotchaClimMax.Value;
+            clim(app.AxesGotcha, [cmin cmax]);
+            xlabel(app.AxesGotcha, 'X (Range, m)');
+            ylabel(app.AxesGotcha, 'Y (Cross-Range, m)');
+
+            azStart = round(app.SpinnerGotchaAzStart.Value);
+            azWidth = round(app.SpinnerGotchaAzWidth.Value);
+            azEnd = azStart + azWidth - 1;
+            title(app.AxesGotcha, sprintf('Gotcha Pass 8 %s (az %d-%d deg, dx=%.2f m, z=%.1f m)', ...
+                app.DropdownGotchaPol.Value, azStart, azEnd, app.GotchaOptions.dx, app.GotchaOptions.z));
+
+            if app.CheckGotchaOverlay.Value
+                hold(app.AxesGotcha, 'on');
+                [mk, hd, names] = sar.imaging.gotcha.reflectorTable();
+                expHead = sar.imaging.gotcha.expectedHeadingForAperture(azStart, azEnd);
+                matchIdx = find(hd == expHead);
+
+                for i = matchIdx.'
+                    plot(app.AxesGotcha, mk(i,1), mk(i,2), 'r+', 'LineWidth', 1.5, 'MarkerSize', 8);
+                    text(app.AxesGotcha, mk(i,1) + 0.8, mk(i,2), names{i}, ...
+                        'Color', [1 0.3 0.3], 'FontSize', 9, 'FontWeight', 'bold');
+                end
+
+                selTgt = app.DropdownGotchaTarget.Value;
+                if ~isempty(selTgt) && selTgt >= 1 && selTgt <= size(mk,1)
+                    plot(app.AxesGotcha, mk(selTgt,1), mk(selTgt,2), 'yo', 'LineWidth', 2, 'MarkerSize', 10);
+                end
+                hold(app.AxesGotcha, 'off');
+            end
+        end
+
+        function inspectCurrentTarget(app)
+            if isempty(app.GotchaImage), return; end
+
+            [mk, hd, names] = sar.imaging.gotcha.reflectorTable();
+            selTgt = app.DropdownGotchaTarget.Value;
+            if isempty(selTgt) || selTgt < 1 || selTgt > size(mk, 1)
+                selTgt = 2;
+            end
+
+            tgtPos = mk(selTgt, :);
+            tgtName = names{selTgt};
+            tgtHeading = hd(selTgt);
+
+            stats = sar.imaging.gotcha.pointTargetResolution(app.GotchaImage, app.GotchaXv, app.GotchaYv, tgtPos);
+            app.GotchaTargetStats = stats;
+
+            app.LabelGotchaTargetName.Text = sprintf('Target %d: %s [Survey: (%.2f, %.2f) m, hd: %d deg]', ...
+                selTgt, tgtName, tgtPos(1), tgtPos(2), tgtHeading);
+
+            medI = median(abs(app.GotchaImage(:)).^2);
+            peakDb = 10*log10(stats.peakIntensity / medI);
+            app.LabelGotchaTargetPeak.Text = sprintf('Peak: %.2e (%.1f dB over clutter median)', ...
+                stats.peakIntensity, peakDb);
+
+            app.LabelGotchaTargetOffset.Text = sprintf('Offset: %.3f m from survey [Peak at (%.2f, %.2f) m]', ...
+                stats.offsetMeters, stats.peakPos(1), stats.peakPos(2));
+
+            app.LabelGotchaTargetWx.Text = sprintf('Range -3 dB Width (wx): %.3f m', stats.widthX);
+            app.LabelGotchaTargetWy.Text = sprintf('Azimuth -3 dB Width (wy): %.3f m', stats.widthY);
+            app.LabelGotchaTargetWmean.Text = sprintf('Mean Resolution: %.3f m', stats.meanWidth);
+
+            if selTgt == 2
+                isCalibOk = (stats.widthX >= 0.27) && (stats.widthX <= 0.33);
+                if isCalibOk
+                    app.LabelGotchaCalibStatus.Text = sprintf('CALIBRATION TARGET STATUS: PASS\nwx = %.3f m lies within 0.30 m +/- 10%% [0.27, 0.33 m]. Offset = %.3f m.', ...
+                        stats.widthX, stats.offsetMeters);
+                    app.LabelGotchaCalibStatus.FontColor = [0.1 0.5 0.2];
+                else
+                    app.LabelGotchaCalibStatus.Text = sprintf('CALIBRATION TARGET STATUS: WARNING\nwx = %.3f m outside 0.30 m +/- 10%% [0.27, 0.33 m].', stats.widthX);
+                    app.LabelGotchaCalibStatus.FontColor = [0.8 0.2 0.2];
+                end
+            else
+                app.LabelGotchaCalibStatus.Text = sprintf('Target %s selected. Survey heading is %d deg.', tgtName, tgtHeading);
+                app.LabelGotchaCalibStatus.FontColor = [0.2 0.2 0.2];
+            end
+
+            if app.CheckGotchaOverlay.Value
+                updateGotchaDisplay(app);
+            end
         end
 
         function buildSimulateTabPlaceholder(app)

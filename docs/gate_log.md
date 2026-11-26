@@ -1033,3 +1033,286 @@ Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\atr_tab.p
 - `docs/despeckle_tab.png` (257 KB, timestamp: 2026-11-23 19:10:19)
 - `scripts/test_g2b.m` (Automated verification script for ATR tab)
 - `tests/run_all_tests.m` (Comprehensive regression suite across G0, Path, G1, G2a, G2b)
+
+
+## Gate G2a Backfill: Multi-Chip Equivalence and Metrics Panel Verification
+**Command**: `matlab -batch "run('scripts/test_g2a.m')"`
+**Date**: 2026-11-27 03:23:34
+**Commit**: Working tree (Gate G2a & G2c verification)
+**Status**: PASS
+
+### Raw Execution Log
+```
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==================== GATE G2A DESPECKLE TAB VERIFICATION ====================
+Date: 2026-11-27 03:23:34
+Reference: Frozen research functions despeckle_filters.m and p3b_denoise.m, executed independently.
+
+--- 1. App Launch & Tab Initialization ---
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-27 03:23:39
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+[PASS] App launched and DespeckleTab selected.
+
+--- 2. Multi-Chip, Multi-Parameter Equivalence Checks ---
+Testing Class: 2s1_gun
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+Testing Class: bmp2_tank
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+Testing Class: btr70_transport
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+Testing Class: t72_tank
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+Testing Class: brdm2_truck
+   Lee win=7 looks=1 max diff: 0.000000e+00 (PASS)
+   Lee win=5 looks=1 max diff: 0.000000e+00 (PASS)
+   MERLIN auto scale max diff: 0.000000e+00 (PASS)
+   MERLIN scale=0.06 max diff: 0.000000e+00 (PASS)
+[PASS] All 5 classes and 4 parameter settings numerically verified against frozen research.
+
+--- 3. Negative Control: Parameter Perturbation Detection ---
+   Perturbed parameter diff (GUI Lee 7 vs Ref Lee 5): 1.161290e-01
+[PASS] Negative control passed: equivalence check correctly catches parameter discrepancy.
+
+--- 4. Metrics Panel Verification (Lee & MERLIN across 5 Classes) ---
+   Class 2s1_gun        : Lee (gain=8.10x, bias=-1.63%) | MERLIN (gain=28.05x, bias=+1.89%) [MATCH]
+   Class bmp2_tank      : Lee (gain=5.45x, bias=-2.34%) | MERLIN (gain=44.29x, bias=-6.83%) [MATCH]
+   Class btr70_transport: Lee (gain=6.51x, bias=-1.36%) | MERLIN (gain=32.99x, bias=-2.98%) [MATCH]
+   Class t72_tank       : Lee (gain=5.35x, bias=-1.26%) | MERLIN (gain=35.03x, bias=-1.18%) [MATCH]
+   Class brdm2_truck    : Lee (gain=3.79x, bias=-0.90%) | MERLIN (gain=22.39x, bias=-0.84%) [MATCH]
+[PASS] Metrics panel matches p3b_metrics across all 5 classes for both Lee and MERLIN.
+   --- Metrics Panel Negative Control (Clutter Mask Perturbation) ---
+     Clutter mask shift: Gain diff = 3.50, Bias diff = 0.1073
+[PASS] Metrics negative control passed: metric calculation is strictly sensitive to clutter region.
+[PASS] Unsegmented Gotcha source displays n/a for undefined clutter/target metrics.
+
+--- 5. MERLIN (MSTAR Net) on Gotcha Source Banner Check ---
+   Banner: "[PHYSICAL LIMIT] MSTAR-trained MERLIN on Gotcha distorts point targets (peak ratio 1.54, half-power widths 1.72 / 1.54 m vs 0.30 m raw). Severe point-target broadening and overshoot."
+[PASS] MERLIN on Gotcha triggers specific point-target distortion banner.
+
+--- 6. Amplitude Source Boundary Enforcement ---
+[PASS] MERLIN Run button disabled on amplitude source.
+[PASS] Direct invocation negative control rejected with: "MERLIN requires COMPLEX single-look SAR imagery (H x W >= 128x128). Detected real amplitude input (e.g. Sentinel-1 GRD). Operation is disabled in accordance with scientific boundaries."
+
+--- 7. Failed-Validation Gotcha MERLIN Toggle Check ---
+[PASS] Failed-validation Gotcha MERLIN displayed with RED warning banner.
+
+--- 8. Screenshot Export ---
+Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\despeckle_tab.png
+[PASS] Despeckle tab screenshot exported to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\despeckle_tab.png
+
+>>> GATE G2A RESULT: PASS (All Backfill Conditions Satisfied) <<<
+==============================================================================
+```
+
+---
+
+## Gate G2c: Gotcha Planar Backprojection Imaging Tab
+**Command**: `matlab -batch "run('scripts/test_g2c.m')"`
+**Date**: 2026-11-27 03:22:49
+**Commit**: Working tree (Gotcha Tab implementation)
+**Status**: PASS
+
+### Verification Summary
+1. **Control Defaults and Validation Labels**: Polarization dropdown defaults to `'HH'`; `'VV (not validated)'`, `'HV (not validated)'`, and `'VH (not validated)'` clearly marked. Aperture defaults to `az 1:3` (start 1, width 3), pixel size `0.30 m`, height `z = -0.3 m`.
+2. **Numerical Equivalence Against Frozen Research (`bp_gotcha`)**:
+   - For Pass 8 HH, Az 1-3 ($161 \times 167$ pixels, $dx=0.30\text{ m}$): GUI backprojection slice exactly matches frozen research function `bp_gotcha.m` with difference `0.000000e+00`.
+   - Grid coordinates $xv$ and $yv$ match with difference `0.000000e+00`.
+3. **Equivalence Negative Control (Aperture Discrepancy)**:
+   - Comparing GUI image against `bp_gotcha` formed on aperture Az 86-88 yields max difference `5.991057e+01` ($> 1.0$).
+4. **Calibration Target 2 (15TR03C) Resolution & Survey Offset**:
+   - Location: `[-28.09, 38.67] m`, survey heading 90 deg.
+   - Measured Range -3 dB width $w_x = 0.3145\text{ m}$ (within $0.30\text{ m} \pm 10\%$ $[0.27, 0.33\text{ m}]$).
+   - Measured Azimuth -3 dB width $w_y = 0.4008\text{ m}$, Mean width $= 0.3576\text{ m}$.
+   - Measured Offset from survey $= 0.6140\text{ m}$ (within unexplained empirical range $0.15 - 0.75\text{ m}$).
+   - Status reports: `CALIBRATION TARGET STATUS: PASS`.
+5. **Reflector Catalog & Visibility Across 4 Cardinal Test Apertures**:
+   - Detects all 13 visible target/aperture pairs across `{1:3, 86:88, 176:178, 266:268}`:
+     - Aperture Az 1-3 (Look 90°): Target 2 (15TR03C, 43.0 dB), Target 10 (15TR10N, 26.1 dB).
+     - Aperture Az 86-88 (Look 0°): Target 3 (15TR02E, 41.3 dB), Target 5 (15TR05E, 42.3 dB), Target 8 (15TR08E, 43.3 dB), Target 11 (15TR11E, 38.9 dB), Target 13 (15TR13E, 26.3 dB).
+     - Aperture Az 176-178 (Look 270°): Target 4 (15TR04S, 42.0 dB), Target 6 (15TR07S, 39.7 dB), Target 12 (15TR12S, 40.0 dB).
+     - Aperture Az 266-268 (Look 180°): Target 1 (15TR01W, 40.8 dB), Target 7 (15TR06W, 51.8 dB), Target 14 (15TR14W, 38.6 dB).
+     - Total: Exactly 13 / 13 detected.
+6. **Scientific Advisory Banners Verified**:
+   - `Planar backprojection (z = -0.3 m). Unexplained look-dependent offsets of 0.15 - 0.75 m relative to ground truth survey. Autofocus corrections not applied (afr=afp=0). Phase Gradient Autofocus (PGA) not implemented.`
+7. **Artifacts Exported**:
+   - `docs/gotcha_tab.png` (122 KB)
+   - Multi-scale screenshots: `docs/gotcha_tab_100.png`, `docs/gotcha_tab_125.png`, `docs/gotcha_tab_150.png`
+
+### Raw Execution Log
+```
+SAR Workbench environment initialized from: C:\Users\sruja\OneDrive\Documents\SARorsmthn
+==================== GATE G2C GOTCHA IMAGING TAB VERIFICATION ====================
+Date: 2026-11-27 03:22:49
+Reference: Frozen research functions gotcha_find.m, gotcha_load.m, bp_gotcha.m, and p3b_gotcha_test.m
+
+--- 1. App Launch & Gotcha Tab Initialization ---
+================ SAR Workbench Environment Check ================
+Timestamp: 2026-11-27 03:22:53
+Root Dir : C:\Users\sruja\OneDrive\Documents\SARorsmthn
+
+[PASS] MATLAB Version: (R2026a) (26.1)
+
+--- Toolboxes ---
+[PASS] Deep Learning Toolbox               : Installed
+[PASS] Image Processing Toolbox            : Installed
+[PASS] Signal Processing Toolbox           : Installed
+[PASS] Statistics and Machine Learning     : Installed
+[PASS] Phased Array System Toolbox         : Installed
+[PASS] Parallel Computing Toolbox          : Installed
+
+--- GPU Acceleration ---
+[PASS] GPU Detected: NVIDIA GeForce RTX 3050 Laptop GPU (4.00 GB total, 3.23 GB free, CC 8.6)
+
+--- Data Paths ---
+[PASS] MSTAR Data: found (13 raw folders, mstar_soc.mat=1)
+[PASS] Gotcha Data: found (1440 .mat files in C:\Users\sruja\OneDrive\Documents\SARorsmthn\Gotcha-CP-Disc2)
+[PASS] Sentinel-1 Data: found (2 SAFE dirs, 0 zip files)
+
+--- Trained Models ---
+[PASS] MERLIN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin.mat
+[PASS] MERLIN (Gotcha): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\p3b_merlin_gotcha.mat
+[PASS] ATR CNN (MSTAR): C:\Users\sruja\OneDrive\Documents\SARorsmthn\models\cnn_mstar.mat
+
+>>> OVERALL STATUS: PASS (Ready for Phase 5 SAR Workbench operations) <<<
+=================================================================
+
+gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+[PASS] App launched and GotchaTab initialized.
+
+--- 2. Control Defaults & Polarization Labels ---
+   Polarization options: HH, VV (not validated), HV (not validated), VH (not validated)
+[PASS] Control defaults and validation labels verified.
+
+--- 3. Numerical Equivalence Against Frozen bp_gotcha (Az 1-3 HH) ---
+gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+   GUI vs Reference Image Max Diff: 0.000000e+00
+   X-grid max diff: 0.000000e+00, Y-grid max diff: 0.000000e+00
+[PASS] Numerical equivalence against frozen bp_gotcha confirmed.
+
+--- 4. Equivalence Negative Control (Aperture Discrepancy Detection) ---
+gotcha_find: 3 files, az 86..88
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 359 pulses x 432 freqs from 3 files; af corrections: 1
+   Negative control diff (Az 1-3 vs Az 86-88): 5.991057e+01
+[PASS] Negative control passed: backprojection image is strictly aperture-sensitive.
+
+--- 5. Calibration Target 2 (15TR03C) Resolution & Offset Check ---
+   Target 2 (15TR03C) Measured Resolution:
+     Range -3 dB Width (wx):  0.3145 m (Nominal: 0.30 m +/- 10%)
+     Azimuth -3 dB Width (wy): 0.4008 m
+     Mean Resolution:         0.3576 m
+     Offset from Survey:      0.6140 m (Nominal range: 0.15 - 0.75 m)
+     Peak Intensity:          1.17e+03
+[PASS] Calibration target resolution (0.314 m) and offset (0.614 m) verified.
+
+--- 6. Reflector Catalog & Visibility Across 4 Test Apertures ---
+gotcha_find: 3 files, az 1..3
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+gotcha_find: 3 files, az 86..88
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 359 pulses x 432 freqs from 3 files; af corrections: 1
+gotcha_find: 3 files, az 176..178
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+gotcha_find: 3 files, az 266..268
+  file 1: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 2: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+  file 3: freq deviation from linear grid = 511 Hz (float32 rounding is <= ~1024 Hz)
+gotcha_load: 358 pulses x 432 freqs from 3 files; af corrections: 1
+   Total Visible Pairs Detected: 13 / 13 expected
+     Pair  1: Ap az [1 2 3] -> Tgt  2 (15TR03C) at (-27.50, 38.50) m | Peak/Med: 43.0 dB | wx=0.314 m, wy=0.401 m
+     Pair  2: Ap az [1 2 3] -> Tgt 10 (15TR10N) at (-17.60, 33.40) m | Peak/Med: 26.1 dB | wx=0.519 m, wy=0.346 m
+     Pair  3: Ap az [86 87 88] -> Tgt  3 (15TR02E) at (-13.70, 37.90) m | Peak/Med: 41.3 dB | wx=0.359 m, wy=0.333 m
+     Pair  4: Ap az [86 87 88] -> Tgt  5 (15TR05E) at (-32.30, 33.40) m | Peak/Med: 42.3 dB | wx=0.339 m, wy=0.312 m
+     Pair  5: Ap az [86 87 88] -> Tgt  8 (15TR08E) at (-15.20, 43.30) m | Peak/Med: 43.3 dB | wx=0.480 m, wy=0.313 m
+     Pair  6: Ap az [86 87 88] -> Tgt 11 (15TR11E) at (-20.30, 27.40) m | Peak/Med: 38.9 dB | wx=0.537 m, wy=0.441 m
+     Pair  7: Ap az [86 87 88] -> Tgt 13 (15TR13E) at (-29.00, 24.70) m | Peak/Med: 26.3 dB | wx=0.346 m, wy=0.582 m
+     Pair  8: Ap az [176 177 178] -> Tgt  4 (15TR04S) at (-24.50, 32.80) m | Peak/Med: 42.0 dB | wx=0.331 m, wy=0.374 m
+     Pair  9: Ap az [176 177 178] -> Tgt  6 (15TR07S) at (-5.30, 22.90) m | Peak/Med: 39.7 dB | wx=0.352 m, wy=0.562 m
+     Pair 10: Ap az [176 177 178] -> Tgt 12 (15TR12S) at (-13.70, 31.90) m | Peak/Med: 40.0 dB | wx=0.321 m, wy=0.334 m
+     Pair 11: Ap az [266 267 268] -> Tgt  1 (15TR01W) at (-32.30, 42.10) m | Peak/Med: 40.8 dB | wx=0.505 m, wy=0.353 m
+     Pair 12: Ap az [266 267 268] -> Tgt  7 (15TR06W) at (-7.10, 50.80) m | Peak/Med: 51.8 dB | wx=0.455 m, wy=0.307 m
+     Pair 13: Ap az [266 267 268] -> Tgt 14 (15TR14W) at (-26.00, 16.90) m | Peak/Med: 38.6 dB | wx=0.408 m, wy=0.436 m
+[PASS] All 13 visible reflector pairs confirmed across test apertures.
+
+--- 7. Scientific Advisory Banner Verification ---
+   Gotcha Banner Text: "Planar backprojection (z = -0.3 m). Unexplained look-dependent offsets of 0.15 - 0.75 m relative to ground truth survey. Autofocus corrections not applied (afr=afp=0). Phase Gradient Autofocus (PGA) not implemented."
+[PASS] Mandatory scientific banners verified.
+
+--- 8. Screenshot Export ---
+Screenshot saved to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\gotcha_tab.png
+[PASS] Gotcha tab screenshot exported to: C:\Users\sruja\OneDrive\Documents\SARorsmthn\docs\gotcha_tab.png
+
+>>> GATE G2C RESULT: PASS (All Gotcha Image Formation Requirements Satisfied) <<<
+===================================================================================
+```
+
+---
+
+## Master Regression Suite Run (Gates G0 through G2c)
+**Command**: `matlab -batch "run('tests/run_all_tests.m')"`
+**Date**: 2026-11-27 03:30:54
+**Execution Time**: 179.25 seconds
+**Status**: PASS (All 6 test stages passed cleanly)
